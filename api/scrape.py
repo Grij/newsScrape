@@ -98,6 +98,41 @@ def get_or_create_sheet(sheet, spreadsheet_id, sheet_name):
         logging.error(f"An error occurred: {error}")
         raise
 
+def setup_dropdown(sheet, spreadsheet_id):
+    try:
+        sheet_id = 0  # ID листа "Articles"
+        body = {
+            "requests": [
+                {
+                    "setDataValidation": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": 1,
+                            "endRowIndex": 1000,
+                            "startColumnIndex": 1,
+                            "endColumnIndex": 2
+                        },
+                        "rule": {
+                            "condition": {
+                                "type": "ONE_OF_LIST",
+                                "values": [
+                                    {"userEnteredValue": "Неопубліковано"},
+                                    {"userEnteredValue": "Опубліковано"}
+                                ]
+                            },
+                            "showCustomUi": True,
+                            "strict": True
+                        }
+                    }
+                }
+            ]
+        }
+        sheet.batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
+        logging.info("Dropdown for status column set up successfully")
+    except HttpError as error:
+        logging.error(f"An error occurred while setting up dropdown: {error}")
+        raise
+
 def get_processed_articles(sheet, spreadsheet_id):
     try:
         get_or_create_sheet(sheet, spreadsheet_id, 'ProcessedArticles')
@@ -167,6 +202,7 @@ def scrape(is_initial_scrape=False):
 
         if is_initial_scrape:
             updated_cells = save_articles_to_sheet(sheet, spreadsheet_id, articles, is_initial=True)
+            setup_dropdown(sheet, spreadsheet_id)
             result = f"Initial scraping completed. Added {len(articles)} articles. Updated {updated_cells} cells."
         else:
             processed_articles = get_processed_articles(sheet, spreadsheet_id)
