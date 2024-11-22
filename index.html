@@ -4,9 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>News Scraper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>News Scraper</h1>
-    <p>Ця сторінка є частиною проекту автоматичного збору новин.</p>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">News Scraper</h1>
+        <p class="mb-6 text-gray-600 text-center">Ця сторінка є частиною проекту автоматичного збору новин.</p>
+        <button id="scrapeButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
+            Скрапнути новини
+        </button>
+        <div id="logContainer" class="mt-6 p-4 bg-gray-200 rounded-lg h-64 overflow-y-auto hidden">
+            <h2 class="text-lg font-semibold mb-2 text-gray-700">Лог виконання:</h2>
+            <pre id="log" class="text-sm text-gray-600 whitespace-pre-wrap"></pre>
+        </div>
+    </div>
+
+    <script>
+        const scrapeButton = document.getElementById('scrapeButton');
+        const logContainer = document.getElementById('logContainer');
+        const log = document.getElementById('log');
+
+        scrapeButton.addEventListener('click', async () => {
+            scrapeButton.disabled = true;
+            scrapeButton.textContent = 'Виконується...';
+            logContainer.classList.remove('hidden');
+            log.textContent = 'Початок виконання скрипту...\n';
+
+            const startTime = new Date();
+
+            try {
+                const response = await fetch('/api/scrape');
+                const text = await response.text();
+
+                const endTime = new Date();
+                const executionTime = (endTime - startTime) / 1000; // в секундах
+
+                log.textContent += `${text}\n`;
+                log.textContent += `Час виконання: ${executionTime.toFixed(2)} секунд\n`;
+                log.textContent += 'Скрипт завершено успішно.';
+            } catch (error) {
+                log.textContent += `Помилка: ${error.message}\n`;
+            } finally {
+                scrapeButton.disabled = false;
+                scrapeButton.textContent = 'Запустити скрапінг';
+            }
+        });
+    </script>
 </body>
 </html>
