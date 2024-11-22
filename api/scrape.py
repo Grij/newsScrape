@@ -1,7 +1,7 @@
 import os
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 from bs4 import BeautifulSoup
 from google.oauth2.service_account import Credentials
@@ -21,22 +21,35 @@ def check_env_vars():
     spreadsheet_id = os.environ.get('SPREADSHEET_ID')
     logging.info(f"SPREADSHEET_ID: {spreadsheet_id if spreadsheet_id else 'Not set'}")
 
-def get_articles(limit=50):
+def get_articles(start_date=None):
     url = "https://babel.ua/texts"
+    articles = []
+    page = 1
     try:
-        response = requests.get(url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, 'html.parser')
-        articles = soup.find_all('article', class_='article-card')
+        while True:
+            response = requests.get(f"{url}?page={page}")
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            article_elements = soup.find_all('article', class_='article-card')
+            
+            if not article_elements:
+                break
+
+            for article in article_elements:
+                title = article.find('h3', class_='article-card__title').text.strip()
+                link = "https://babel.ua" + article.find('a', class_='article-card__link')['href']
+                date_str = article.find('time', class_='article-card__date')['datetime']
+                date = datetime.fromisoformat(date_str).replace(tzinfo=timezone.utc)
+                
+                if start_date and date < start_date:
+                    return articles
+                
+                articles.append((title, link, date))
+            
+            page += 1
         
-        parsed_articles = []
-        for article in articles[:limit]:
-            title = article.find('h3', class_='article-card__title').text.strip()
-            link = "https://babel.ua" + article.find('a', class_='article-card__link')['href']
-            parsed_articles.append((title, link))
-        
-        logging.info(f"Found {len(parsed_articles)} articles")
-        return parsed_articles
+        logging.info(f"Found {len(articles)} articles")
+        return articles
     except requests.RequestException as e:
         logging.error(f"Error fetching articles: {str(e)}")
         return []
@@ -70,8 +83,8 @@ def get_processed_articles(sheet):
         raise ValueError("SPREADSHEET_ID environment variable is not set")
     
     try:
-        result = sheet.values().get(spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:B').execute()
-        processed = set(tuple(row) for row in result.get('values', []))
+        result = sheet.values().get(spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:C').execute()
+        processed = set((row[0], row[1]) for row in result.get('values', [])[1:])  # Skip header
         logging.info(f"Retrieved {len(processed)} processed articles")
         return processed
     except HttpError as error:
@@ -86,7 +99,7 @@ def add_new_articles(sheet, new_articles):
     
     try:
         body = {
-            'values': [[title, link, str(datetime.now())] for title, link in new_articles]
+            'values': [[title, link, date.isoformat()] for title, link, date in new_articles]
         }
         result = sheet.values().append(
             spreadsheetId=spreadsheet_id, range='Articles!A:C',
@@ -95,10 +108,10 @@ def add_new_articles(sheet, new_articles):
         
         # Додавання нових статей до списку оброблених
         body = {
-            'values': [[title, link] for title, link in new_articles]
+            'values': [[title, link, date.isoformat()] for title, link, date in new_articles]
         }
         sheet.values().append(
-            spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:B',
+            spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:C',
             valueInputOption='USER_ENTERED', body=body).execute()
         logging.info(f"Added {len(new_articles)} new articles to ProcessedArticles")
         
@@ -106,7 +119,7 @@ def add_new_articles(sheet, new_articles):
         logging.error(f"An error occurred while adding new articles: {error}")
         raise Exception(f"An error occurred while adding new articles: {error}")
 
-def scrape():
+def scrape(is_initial_scrape=False):
     start_time = datetime.now()
     logging.info("Script started.")
     
@@ -115,9 +128,14 @@ def scrape():
     try:
         sheet = setup_sheets()
         processed_articles = get_processed_articles(sheet)
-        current_articles = get_articles(50)  # Отримуємо останні 50 статей
         
-        new_articles = [article for article in current_articles if article not in processed_articles]
+        if is_initial_scrape:
+            start_date = datetime(2024, 11, 22, tzinfo=timezone.utc)
+            current_articles = get_articles(start_date)
+        else:
+            current_articles = get_articles()
+        
+        new_articles = [article for article in current_articles if (article[0], article[1]) not in processed_articles]
         
         logging.info(f"Found {len(new_articles)} new articles")
         
@@ -140,7 +158,8 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == '/api/scrape':
             try:
-                result = scrape()
+                is_initial_scrape = self.headers.get('X-Initial-Scrape') == 'true'
+                result = scrape(is_initial_scrape)
                 self.send_response(200)
                 self.send_header('Content-type', 'text/plain')
                 self.end_headers()
@@ -156,4 +175,4 @@ class handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
 if __name__ == "__main__":
-    print(scrape())
+    print(scrape(True))
