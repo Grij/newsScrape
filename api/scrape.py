@@ -12,6 +12,15 @@ from http.server import BaseHTTPRequestHandler
 # Налаштування логування
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def check_env_vars():
+    creds = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    logging.info(f"GOOGLE_APPLICATION_CREDENTIALS: {'Set' if creds else 'Not set'}")
+    if creds:
+        logging.info(f"Length of GOOGLE_APPLICATION_CREDENTIALS: {len(creds)}")
+    
+    spreadsheet_id = os.getenv('SPREADSHEET_ID')
+    logging.info(f"SPREADSHEET_ID: {'Set' if spreadsheet_id else 'Not set'}")
+
 def get_articles():
     url = "https://babel.ua/texts"
     try:
@@ -33,17 +42,18 @@ def get_articles():
         return []
 
 def setup_sheets():
-    creds_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-    if not creds_json:
+    try:
+        creds_json = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
+    except KeyError:
         logging.error("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set")
         raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set")
     
     try:
         creds_dict = json.loads(creds_json)
         creds = Credentials.from_service_account_info(creds_dict)
-    except json.JSONDecodeError:
-        logging.error("Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS")
-        raise ValueError("Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS")
+    except json.JSONDecodeError as e:
+        logging.error(f"Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS: {str(e)}")
+        raise ValueError(f"Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS: {str(e)}")
     
     try:
         service = build('sheets', 'v4', credentials=creds)
@@ -100,6 +110,8 @@ def scrape():
     start_time = datetime.now()
     logging.info("Script started.")
     
+    check_env_vars()
+    
     try:
         sheet = setup_sheets()
         processed_articles = get_processed_articles(sheet)
@@ -132,7 +144,12 @@ class handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(result.encode())
             except Exception as e:
-                self.send_error(500, str(e))
+                error_message = f"An error occurred: {str(e)}\n"
+                error_message += f"Environment variables:\n"
+                for key, value in os.environ.items():
+                    if key.startswith('GOOGLE_') or key == 'SPREADSHEET_ID':
+                        error_message += f"{key}: {'Set' if value else 'Not set'}\n"
+                self.send_error(500, error_message)
         else:
             self.send_error(404)
 
