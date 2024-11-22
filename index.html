@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News Scraper</title>
+    <title>News Scraper and Analyzer</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
     <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl">
-        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">News Scraper</h1>
-        <p class="mb-6 text-gray-600 text-center">Ця сторінка є частиною проекту автоматичного збору новин.</p>
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">News Scraper and Analyzer</h1>
+        <p class="mb-6 text-gray-600 text-center">Ця сторінка є частиною проекту автоматичного збору та аналізу новин.</p>
         <div class="flex space-x-4 mb-6">
             <button id="initialScrapeButton" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
                 Початковий скрапінг
             </button>
             <button id="scrapeButton" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
-                Скрапнути свіженьке
+                Запустити скрапінг
+            </button>
+            <button id="analyzeButton" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
+                Аналізувати статті
             </button>
         </div>
         <div id="logContainer" class="mt-6 p-4 bg-gray-200 rounded-lg h-96 overflow-y-auto hidden">
@@ -27,6 +30,7 @@
     <script>
         const initialScrapeButton = document.getElementById('initialScrapeButton');
         const scrapeButton = document.getElementById('scrapeButton');
+        const analyzeButton = document.getElementById('analyzeButton');
         const logContainer = document.getElementById('logContainer');
         const log = document.getElementById('log');
 
@@ -76,8 +80,41 @@
             }
         }
 
+        async function runAnalysis() {
+            analyzeButton.disabled = true;
+            analyzeButton.textContent = 'Аналізується...';
+            logContainer.classList.remove('hidden');
+            log.innerHTML = '';
+            addLogEntry('Початок аналізу статей...');
+
+            const startTime = new Date();
+
+            try {
+                const response = await fetch('/api/rate_articles');
+                const text = await response.text();
+
+                if (response.ok) {
+                    addLogEntry(text);
+                } else {
+                    addLogEntry(`Помилка: ${text}`, true);
+                }
+
+                const endTime = new Date();
+                const executionTime = (endTime - startTime) / 1000; // в секундах
+
+                addLogEntry(`Загальний час виконання: ${executionTime.toFixed(2)} секунд`);
+                addLogEntry('Аналіз завершено.');
+            } catch (error) {
+                addLogEntry(`Помилка: ${error.message}`, true);
+            } finally {
+                analyzeButton.disabled = false;
+                analyzeButton.textContent = 'Аналізувати статті';
+            }
+        }
+
         initialScrapeButton.addEventListener('click', () => runScrape(true));
         scrapeButton.addEventListener('click', () => runScrape(false));
+        analyzeButton.addEventListener('click', runAnalysis);
     </script>
 </body>
 </html>
