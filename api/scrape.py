@@ -7,55 +7,71 @@ from bs4 import BeautifulSoup
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from http.server import BaseHTTPRequestHandler
 
 # Налаштування логування
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_articles():
     url = "https://babel.ua/texts"
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
-    articles = soup.find_all('article', class_='article-card')
-    
-    parsed_articles = []
-    for article in articles:
-        title = article.find('h3', class_='article-card__title').text.strip()
-        link = "https://babel.ua" + article.find('a', class_='article-card__link')['href']
-        parsed_articles.append((title, link))
-    
-    return parsed_articles
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.content, 'html.parser')
+        articles = soup.find_all('article', class_='article-card')
+        
+        parsed_articles = []
+        for article in articles:
+            title = article.find('h3', class_='article-card__title').text.strip()
+            link = "https://babel.ua" + article.find('a', class_='article-card__link')['href']
+            parsed_articles.append((title, link))
+        
+        logging.info(f"Found {len(parsed_articles)} articles")
+        return parsed_articles
+    except requests.RequestException as e:
+        logging.error(f"Error fetching articles: {str(e)}")
+        return []
 
 def setup_sheets():
     creds_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
     if not creds_json:
+        logging.error("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set")
         raise ValueError("GOOGLE_APPLICATION_CREDENTIALS environment variable is not set")
     
     try:
         creds_dict = json.loads(creds_json)
         creds = Credentials.from_service_account_info(creds_dict)
     except json.JSONDecodeError:
+        logging.error("Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS")
         raise ValueError("Invalid JSON in GOOGLE_APPLICATION_CREDENTIALS")
     
     try:
         service = build('sheets', 'v4', credentials=creds)
+        logging.info("Successfully set up Google Sheets service")
         return service.spreadsheets()
     except HttpError as error:
+        logging.error(f"An error occurred while setting up Google Sheets: {error}")
         raise Exception(f"An error occurred while setting up Google Sheets: {error}")
 
 def get_processed_articles(sheet):
     spreadsheet_id = os.getenv('SPREADSHEET_ID')
     if not spreadsheet_id:
+        logging.error("SPREADSHEET_ID environment variable is not set")
         raise ValueError("SPREADSHEET_ID environment variable is not set")
     
     try:
         result = sheet.values().get(spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:B').execute()
-        return set(tuple(row) for row in result.get('values', []))
+        processed = set(tuple(row) for row in result.get('values', []))
+        logging.info(f"Retrieved {len(processed)} processed articles")
+        return processed
     except HttpError as error:
+        logging.error(f"An error occurred while fetching processed articles: {error}")
         raise Exception(f"An error occurred while fetching processed articles: {error}")
 
 def add_new_articles(sheet, new_articles):
     spreadsheet_id = os.getenv('SPREADSHEET_ID')
     if not spreadsheet_id:
+        logging.error("SPREADSHEET_ID environment variable is not set")
         raise ValueError("SPREADSHEET_ID environment variable is not set")
     
     try:
@@ -74,11 +90,13 @@ def add_new_articles(sheet, new_articles):
         sheet.values().append(
             spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:B',
             valueInputOption='USER_ENTERED', body=body).execute()
+        logging.info(f"Added {len(new_articles)} new articles to ProcessedArticles")
         
     except HttpError as error:
+        logging.error(f"An error occurred while adding new articles: {error}")
         raise Exception(f"An error occurred while adding new articles: {error}")
 
-def main():
+def scrape():
     start_time = datetime.now()
     logging.info("Script started.")
     
@@ -97,10 +115,26 @@ def main():
         
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")
+        return f"Error: {str(e)}"
     
     end_time = datetime.now()
     execution_time = (end_time - start_time).total_seconds()
     logging.info(f"Script finished. Execution time: {execution_time:.2f} seconds.")
+    return f"Script completed successfully. Execution time: {execution_time:.2f} seconds."
+
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/api/scrape':
+            try:
+                result = scrape()
+                self.send_response(200)
+                self.send_header('Content-type', 'text/plain')
+                self.end_headers()
+                self.wfile.write(result.encode())
+            except Exception as e:
+                self.send_error(500, str(e))
+        else:
+            self.send_error(404)
 
 if __name__ == "__main__":
-    main()
+    scrape()
