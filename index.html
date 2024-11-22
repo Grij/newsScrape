@@ -90,13 +90,19 @@
             const startTime = new Date();
 
             try {
-                const response = await fetch('/api/rate_articles');
-                const text = await response.text();
+                const response = await fetch('/api/analyze');
+                const data = await response.json();
 
                 if (response.ok) {
-                    addLogEntry(text);
+                    addLogEntry(data.message);
+                    if (data.output) {
+                        addLogEntry(data.output);
+                    }
                 } else {
-                    addLogEntry(`Помилка: ${text}`, true);
+                    addLogEntry(`Помилка: ${data.error}`, true);
+                    if (data.details) {
+                        addLogEntry(`Деталі: ${data.details}`, true);
+                    }
                 }
 
                 const endTime = new Date();
