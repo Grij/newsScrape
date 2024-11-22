@@ -7,13 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl">
         <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">News Scraper</h1>
         <p class="mb-6 text-gray-600 text-center">Ця сторінка є частиною проекту автоматичного збору новин.</p>
         <button id="scrapeButton" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
-            Скрапнути новини
+            Запустити скрапінг
         </button>
-        <div id="logContainer" class="mt-6 p-4 bg-gray-200 rounded-lg h-64 overflow-y-auto hidden">
+        <div id="logContainer" class="mt-6 p-4 bg-gray-200 rounded-lg h-96 overflow-y-auto hidden">
             <h2 class="text-lg font-semibold mb-2 text-gray-700">Лог виконання:</h2>
             <pre id="log" class="text-sm text-gray-600 whitespace-pre-wrap"></pre>
         </div>
@@ -24,11 +24,18 @@
         const logContainer = document.getElementById('logContainer');
         const log = document.getElementById('log');
 
+        function addLogEntry(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.textContent += `[${timestamp}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+
         scrapeButton.addEventListener('click', async () => {
             scrapeButton.disabled = true;
             scrapeButton.textContent = 'Виконується...';
             logContainer.classList.remove('hidden');
-            log.textContent = 'Початок виконання скрипту...\n';
+            log.textContent = '';
+            addLogEntry('Початок виконання скрипту...');
 
             const startTime = new Date();
 
@@ -36,14 +43,16 @@
                 const response = await fetch('/api/scrape');
                 const text = await response.text();
 
+                const logLines = text.split('\n');
+                logLines.forEach(line => addLogEntry(line));
+
                 const endTime = new Date();
                 const executionTime = (endTime - startTime) / 1000; // в секундах
 
-                log.textContent += `${text}\n`;
-                log.textContent += `Час виконання: ${executionTime.toFixed(2)} секунд\n`;
-                log.textContent += 'Скрипт завершено успішно.';
+                addLogEntry(`Час виконання: ${executionTime.toFixed(2)} секунд`);
+                addLogEntry('Скрипт завершено успішно.');
             } catch (error) {
-                log.textContent += `Помилка: ${error.message}\n`;
+                addLogEntry(`Помилка: ${error.message}`);
             } finally {
                 scrapeButton.disabled = false;
                 scrapeButton.textContent = 'Запустити скрапінг';
