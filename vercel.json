@@ -6,8 +6,7 @@
       "maxDuration": 60
     }
   },
-  "crons": [{
-    "path": "/api/scrape",
-    "schedule": "0 12 * * *"
-  }]
+  "routes": [
+    { "src": "/api/scrape", "dest": "/api/scrape.py" }
+  ]
 }
