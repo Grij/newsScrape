@@ -10,3 +10,11 @@
     { "src": "/api/scrape", "dest": "/api/scrape.py" }
   ]
 }
+{
+  "functions": {
+    "api/analyze.js": {
+      "memory": 1024,
+      "maxDuration": 60
+    }
+  }
+}

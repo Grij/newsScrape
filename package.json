@@ -1,0 +1,4 @@
+"dependencies": {
+  "googleapis": "^92.0.0",
+  "node-fetch": "^3.2.0"
+}
