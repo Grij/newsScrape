@@ -13,15 +13,15 @@ from http.server import BaseHTTPRequestHandler
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def check_env_vars():
-    creds = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
+    creds = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
     logging.info(f"GOOGLE_APPLICATION_CREDENTIALS: {'Set' if creds else 'Not set'}")
     if creds:
         logging.info(f"Length of GOOGLE_APPLICATION_CREDENTIALS: {len(creds)}")
     
-    spreadsheet_id = os.getenv('SPREADSHEET_ID')
-    logging.info(f"SPREADSHEET_ID: {'Set' if spreadsheet_id else 'Not set'}")
+    spreadsheet_id = os.environ.get('SPREADSHEET_ID')
+    logging.info(f"SPREADSHEET_ID: {spreadsheet_id if spreadsheet_id else 'Not set'}")
 
-def get_articles():
+def get_articles(limit=50):
     url = "https://babel.ua/texts"
     try:
         response = requests.get(url)
@@ -30,7 +30,7 @@ def get_articles():
         articles = soup.find_all('article', class_='article-card')
         
         parsed_articles = []
-        for article in articles:
+        for article in articles[:limit]:
             title = article.find('h3', class_='article-card__title').text.strip()
             link = "https://babel.ua" + article.find('a', class_='article-card__link')['href']
             parsed_articles.append((title, link))
@@ -64,7 +64,7 @@ def setup_sheets():
         raise Exception(f"An error occurred while setting up Google Sheets: {error}")
 
 def get_processed_articles(sheet):
-    spreadsheet_id = os.getenv('SPREADSHEET_ID')
+    spreadsheet_id = os.environ.get('SPREADSHEET_ID')
     if not spreadsheet_id:
         logging.error("SPREADSHEET_ID environment variable is not set")
         raise ValueError("SPREADSHEET_ID environment variable is not set")
@@ -79,7 +79,7 @@ def get_processed_articles(sheet):
         raise Exception(f"An error occurred while fetching processed articles: {error}")
 
 def add_new_articles(sheet, new_articles):
-    spreadsheet_id = os.getenv('SPREADSHEET_ID')
+    spreadsheet_id = os.environ.get('SPREADSHEET_ID')
     if not spreadsheet_id:
         logging.error("SPREADSHEET_ID environment variable is not set")
         raise ValueError("SPREADSHEET_ID environment variable is not set")
@@ -115,9 +115,11 @@ def scrape():
     try:
         sheet = setup_sheets()
         processed_articles = get_processed_articles(sheet)
-        current_articles = get_articles()
+        current_articles = get_articles(50)  # Отримуємо останні 50 статей
         
         new_articles = [article for article in current_articles if article not in processed_articles]
+        
+        logging.info(f"Found {len(new_articles)} new articles")
         
         if new_articles:
             add_new_articles(sheet, new_articles)
@@ -132,7 +134,7 @@ def scrape():
     end_time = datetime.now()
     execution_time = (end_time - start_time).total_seconds()
     logging.info(f"Script finished. Execution time: {execution_time:.2f} seconds.")
-    return f"Script completed successfully. Execution time: {execution_time:.2f} seconds."
+    return f"Script completed successfully. Found {len(new_articles)} new articles. Execution time: {execution_time:.2f} seconds."
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -154,4 +156,4 @@ class handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
 if __name__ == "__main__":
-    scrape()
+    print(scrape())
