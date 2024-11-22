@@ -15,7 +15,7 @@
                 Початковий скрапінг
             </button>
             <button id="scrapeButton" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
-                Запустити скрапінг
+                Скрапнути свіженьке
             </button>
         </div>
         <div id="logContainer" class="mt-6 p-4 bg-gray-200 rounded-lg h-96 overflow-y-auto hidden">
@@ -30,9 +30,12 @@
         const logContainer = document.getElementById('logContainer');
         const log = document.getElementById('log');
 
-        function addLogEntry(message) {
+        function addLogEntry(message, isError = false) {
             const timestamp = new Date().toLocaleTimeString();
-            log.textContent += `[${timestamp}] ${message}\n`;
+            const logEntry = document.createElement('div');
+            logEntry.className = isError ? 'text-red-500' : 'text-gray-600';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            log.appendChild(logEntry);
             log.scrollTop = log.scrollHeight;
         }
 
@@ -41,7 +44,7 @@
             button.disabled = true;
             button.textContent = 'Виконується...';
             logContainer.classList.remove('hidden');
-            log.textContent = '';
+            log.innerHTML = '';
             addLogEntry(`Початок ${isInitial ? 'початкового' : ''} виконання скрипту...`);
 
             const startTime = new Date();
@@ -54,15 +57,19 @@
                 });
                 const text = await response.text();
 
-                addLogEntry(text);
+                if (response.ok) {
+                    addLogEntry(text);
+                } else {
+                    addLogEntry(`Помилка: ${text}`, true);
+                }
 
                 const endTime = new Date();
                 const executionTime = (endTime - startTime) / 1000; // в секундах
 
                 addLogEntry(`Загальний час виконання: ${executionTime.toFixed(2)} секунд`);
-                addLogEntry('Скрипт завершено успішно.');
+                addLogEntry('Скрипт завершено.');
             } catch (error) {
-                addLogEntry(`Помилка: ${error.message}`);
+                addLogEntry(`Помилка: ${error.message}`, true);
             } finally {
                 button.disabled = false;
                 button.textContent = isInitial ? 'Початковий скрапінг' : 'Запустити скрапінг';

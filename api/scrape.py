@@ -74,12 +74,29 @@ def setup_sheets():
         logging.error(f"Error setting up Google Sheets: {e}")
         raise
 
-def get_processed_articles(sheet):
-    spreadsheet_id = os.environ.get('SPREADSHEET_ID')
-    if not spreadsheet_id:
-        raise ValueError("SPREADSHEET_ID environment variable is not set")
-    
+def get_or_create_sheet(sheet, spreadsheet_id, sheet_name):
     try:
+        sheet.get(spreadsheetId=spreadsheet_id, ranges=[sheet_name]).execute()
+        logging.info(f"Sheet '{sheet_name}' already exists")
+    except HttpError as error:
+        if error.resp.status == 404:
+            logging.info(f"Sheet '{sheet_name}' not found. Creating it.")
+            body = {
+                'requests': [{
+                    'addSheet': {
+                        'properties': {
+                            'title': sheet_name
+                        }
+                    }
+                }]
+            }
+            sheet.batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
+        else:
+            raise
+
+def get_processed_articles(sheet, spreadsheet_id):
+    try:
+        get_or_create_sheet(sheet, spreadsheet_id, 'ProcessedArticles')
         result = sheet.values().get(spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:C').execute()
         processed = set(row[2] for row in result.get('values', [])[1:])  # Skip header
         logging.info(f"Retrieved {len(processed)} processed articles")
@@ -88,12 +105,11 @@ def get_processed_articles(sheet):
         logging.error(f"An error occurred while fetching processed articles: {error}")
         raise
 
-def save_articles_to_sheet(sheet, articles, is_initial=False):
-    spreadsheet_id = os.environ.get('SPREADSHEET_ID')
-    if not spreadsheet_id:
-        raise ValueError("SPREADSHEET_ID environment variable is not set")
-    
+def save_articles_to_sheet(sheet, spreadsheet_id, articles, is_initial=False):
     try:
+        get_or_create_sheet(sheet, spreadsheet_id, 'Articles')
+        get_or_create_sheet(sheet, spreadsheet_id, 'ProcessedArticles')
+        
         values = [["Заголовок", "Статус", "Посилання", "Текст"]] if is_initial else []
         for article in articles:
             text = get_clean_text(article['url'])
@@ -102,8 +118,8 @@ def save_articles_to_sheet(sheet, articles, is_initial=False):
         body = {'values': values}
         range_name = 'Articles!A1' if is_initial else 'Articles!A1:D1'
         if is_initial:
-            sheet.values().clear(spreadsheetId=spreadsheet_id, range='Articles').execute()
-            sheet.values().clear(spreadsheetId=spreadsheet_id, range='ProcessedArticles').execute()
+            sheet.values().clear(spreadsheetId=spreadsheet_id, range='Articles!A:D').execute()
+            sheet.values().clear(spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:C').execute()
         
         result = sheet.values().append(
             spreadsheetId=spreadsheet_id,
@@ -135,6 +151,10 @@ def scrape(is_initial_scrape=False):
     
     try:
         sheet = setup_sheets()
+        spreadsheet_id = os.environ.get('SPREADSHEET_ID')
+        if not spreadsheet_id:
+            raise ValueError("SPREADSHEET_ID environment variable is not set")
+        
         html_content = fetch_page_content(URL)
         if not html_content:
             return "Failed to fetch page content"
@@ -142,13 +162,13 @@ def scrape(is_initial_scrape=False):
         articles = parse_articles(html_content)
 
         if is_initial_scrape:
-            updated_cells = save_articles_to_sheet(sheet, articles, is_initial=True)
+            updated_cells = save_articles_to_sheet(sheet, spreadsheet_id, articles, is_initial=True)
             result = f"Initial scraping completed. Added {len(articles)} articles. Updated {updated_cells} cells."
         else:
-            processed_articles = get_processed_articles(sheet)
+            processed_articles = get_processed_articles(sheet, spreadsheet_id)
             new_articles = [article for article in articles if article['url'] not in processed_articles]
             if new_articles:
-                updated_cells = save_articles_to_sheet(sheet, new_articles)
+                updated_cells = save_articles_to_sheet(sheet, spreadsheet_id, new_articles)
                 result = f"Added {len(new_articles)} new articles. Updated {updated_cells} cells."
             else:
                 result = "No new articles found."
