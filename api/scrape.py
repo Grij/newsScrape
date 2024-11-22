@@ -76,23 +76,27 @@ def setup_sheets():
 
 def get_or_create_sheet(sheet, spreadsheet_id, sheet_name):
     try:
-        sheet.get(spreadsheetId=spreadsheet_id, ranges=[sheet_name]).execute()
-        logging.info(f"Sheet '{sheet_name}' already exists")
-    except HttpError as error:
-        if error.resp.status == 404:
-            logging.info(f"Sheet '{sheet_name}' not found. Creating it.")
-            body = {
-                'requests': [{
-                    'addSheet': {
-                        'properties': {
-                            'title': sheet_name
-                        }
+        sheet_metadata = sheet.get(spreadsheetId=spreadsheet_id).execute()
+        sheets = sheet_metadata.get('sheets', '')
+        for s in sheets:
+            if s['properties']['title'] == sheet_name:
+                logging.info(f"Sheet '{sheet_name}' already exists")
+                return
+        
+        logging.info(f"Sheet '{sheet_name}' not found. Creating it.")
+        body = {
+            'requests': [{
+                'addSheet': {
+                    'properties': {
+                        'title': sheet_name
                     }
-                }]
-            }
-            sheet.batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
-        else:
-            raise
+                }
+            }]
+        }
+        sheet.batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
+    except HttpError as error:
+        logging.error(f"An error occurred: {error}")
+        raise
 
 def get_processed_articles(sheet, spreadsheet_id):
     try:
