@@ -15,7 +15,7 @@
                 Початковий скрапінг
             </button>
             <button id="scrapeButton" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
-                Скрапнути свіженьке
+                Запустити скрапінг
             </button>
         </div>
         <div id="logContainer" class="mt-6 p-4 bg-gray-200 rounded-lg h-96 overflow-y-auto hidden">
@@ -54,13 +54,12 @@
                 });
                 const text = await response.text();
 
-                const logLines = text.split('\n');
-                logLines.forEach(line => addLogEntry(line));
+                addLogEntry(text);
 
                 const endTime = new Date();
                 const executionTime = (endTime - startTime) / 1000; // в секундах
 
-                addLogEntry(`Час виконання: ${executionTime.toFixed(2)} секунд`);
+                addLogEntry(`Загальний час виконання: ${executionTime.toFixed(2)} секунд`);
                 addLogEntry('Скрипт завершено успішно.');
             } catch (error) {
                 addLogEntry(`Помилка: ${error.message}`);
