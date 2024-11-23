@@ -1,86 +1,93 @@
-import { google } from 'googleapis';
-import fetch from 'node-fetch';
+const { google } = require('googleapis');
+const fetch = require('node-fetch');
 
-const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID;
-const PERPLEXITY_API_KEY = process.env.PERPLEXITY_API_KEY;
-
-async function setupSheets() {
-  const auth = new google.auth.GoogleAuth({
-    scopes: SCOPES,
-  });
-  const client = await auth.getClient();
-  return google.sheets({ version: 'v4', auth: client });
-}
-
-async function getUnprocessedArticles(sheets) {
-  const response = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: 'Articles!A2:D',
-  });
-  const rows = response.data.values || [];
-  return rows.filter(row => row[1] === "Неопубліковано");
-}
-
-async function analyzeWithPerplexity(title, content) {
-  const prompt = `Проаналізуйте цю новину та визначте, чи вона стосується України. Заголовок: '${title}'. Зміст: '${content.slice(0, 500)}...'. Дайте відповідь 'Так' або 'Ні', а потім оцініть актуальність новини для України за шкалою від 1 до 10.`;
-  
-  const response = await fetch("https://api.perplexity.ai/chat/completions", {
-    method: 'POST',
-    headers: {
-      "Authorization": `Bearer ${PERPLEXITY_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "mixtral-8x7b-instruct",
-      messages: [{ role: "user", content: prompt }]
-    })
-  });
-
-  const result = await response.json();
-  const analysis = result.choices[0].message.content;
-  
-  const isRelevant = analysis.split()[0].includes("Так");
-  const relevanceScore = isRelevant ? parseInt(analysis.split().pop()) : 0;
-  
-  return { isRelevant, relevanceScore };
-}
-
-async function updateArticleStatus(sheets, row, status, facebook = false) {
-  const range = `Articles!B${row}:E${row}`;
-  const values = [[status, null, null, facebook ? "Facebook" : null]];
-  
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: SPREADSHEET_ID,
-    range: range,
-    valueInputOption: 'USER_ENTERED',
-    resource: { values },
-  });
-}
-
-export default async function handler(req, res) {
+// Функція для створення клієнта auth
+function getAuthClient() {
   try {
-    const sheets = await setupSheets();
-    const articles = await getUnprocessedArticles(sheets);
-    
-    let processedCount = 0;
-    for (const [index, article] of articles.entries()) {
-      const [title, , , content] = article;
-      const { isRelevant, relevanceScore } = await analyzeWithPerplexity(title, content);
-      
-      if (!isRelevant) {
-        await updateArticleStatus(sheets, index + 2, "Забраковано");
-      } else if (relevanceScore >= 8) {
-        await updateArticleStatus(sheets, index + 2, "Опубліковано", true);
-      } else {
-        await updateArticleStatus(sheets, index + 2, "Опубліковано");
-      }
-      processedCount++;
-    }
-    
-    res.status(200).json({ message: `Успішно оброблено ${processedCount} статей.` });
+    const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+    return new google.auth.JWT(
+      credentials.client_email,
+      null,
+      credentials.private_key,
+      ['https://www.googleapis.com/auth/spreadsheets']
+    );
   } catch (error) {
-    console.error(error);
+    console.error('Помилка при створенні auth клієнта:', error);
+    throw error;
+  }
+}
+
+async function analyzeArticles(req, res) {
+  console.log('[' + new Date().toLocaleTimeString() + '] Початок аналізу статей...');
+  const startTime = Date.now();
+
+  try {
+    const auth = getAuthClient();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Отримання даних з Google Sheets
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: process.env.SPREADSHEET_ID,
+      range: 'A2:E', // Припускаємо, що дані починаються з другого рядка
+    });
+
+    const rows = response.data.values;
+    if (!rows || rows.length === 0) {
+      throw new Error('Не знайдено даних у таблиці');
+    }
+
+    // Аналіз кожної статті
+    for (const row of rows) {
+      const [date, title, link, status, relevance] = row;
+      
+      // Пропускаємо статті, які вже мають оцінку релевантності або статус "Rejected"
+      if (relevance || status === 'Rejected') continue;
+
+      // Аналіз статті за допомогою Perplexity API
+      const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'mistral-7b-instruct',
+          messages: [
+            { role: 'system', content: 'You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10.' },
+            { role: 'user', content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation: "${title}"` }
+          ]
+        })
+      });
+
+      if (!perplexityResponse.ok) {
+        throw new Error(`Помилка API Perplexity: ${perplexityResponse.statusText}`);
+      }
+
+      const perplexityData = await perplexityResponse.json();
+      const relevanceScore = parseInt(perplexityData.choices[0].message.content);
+
+      // Оновлення Google Sheets з оцінкою релевантності
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: process.env.SPREADSHEET_ID,
+        range: `E${rows.indexOf(row) + 2}`, // +2 because rows are 0-indexed and we start from the second row
+        valueInputOption: 'USER_ENTERED',
+        resource: {
+          values: [[relevanceScore]]
+        }
+      });
+
+      console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: ${title}, Оцінка: ${relevanceScore}`);
+    }
+
+    const endTime = Date.now();
+    const executionTime = (endTime - startTime) / 1000;
+    console.log(`[${new Date().toLocaleTimeString()}] Аналіз завершено. Загальний час виконання: ${executionTime.toFixed(2)} секунд`);
+
+    res.status(200).json({ message: 'Аналіз статей завершено успішно', executionTime });
+  } catch (error) {
+    console.error(`[${new Date().toLocaleTimeString()}] Помилка:`, error);
     res.status(500).json({ error: 'An error occurred while processing articles', details: error.message });
   }
 }
+
+module.exports = analyzeArticles;

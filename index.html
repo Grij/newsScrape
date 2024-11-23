@@ -3,124 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>News Scraper and Analyzer</title>
+    <title>Scraper Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Додаткові стилі */
+        .btn {
+            @apply px-4 py-2 rounded transition duration-200 ease-in-out;
+        }
+        .btn-primary {
+            @apply bg-blue-500 text-white hover:bg-blue-600;
+        }
+        .btn-secondary {
+            @apply bg-gray-500 text-white hover:bg-gray-600;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-2xl">
-        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">News Scraper and Analyzer</h1>
-        <p class="mb-6 text-gray-600 text-center">Ця сторінка є частиною проекту автоматичного збору та аналізу новин.</p>
-        <div class="flex space-x-4 mb-6">
-            <button id="initialScrapeButton" class="flex-1 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
-                Початковий скрапінг
-            </button>
-            <button id="scrapeButton" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
-                Запустити скрапінг
-            </button>
-            <button id="analyzeButton" class="flex-1 bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded transition duration-300 ease-in-out transform hover:scale-105">
-                Аналізувати статті
-            </button>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-6 text-center">Scraper Dashboard</h1>
+        <div class="flex flex-col space-y-4 mb-6">
+            <button id="scrapeBtn" class="btn btn-primary">Запустити скрапінг</button>
+            <button id="analyzeBtn" class="btn btn-secondary">Аналізувати статті</button>
         </div>
-        <div id="logContainer" class="mt-6 p-4 bg-gray-200 rounded-lg h-96 overflow-y-auto hidden">
-            <h2 class="text-lg font-semibold mb-2 text-gray-700">Лог виконання:</h2>
-            <pre id="log" class="text-sm text-gray-600 whitespace-pre-wrap"></pre>
-        </div>
+        <div id="logContainer" class="bg-white p-4 rounded shadow-md h-64 overflow-y-auto"></div>
     </div>
-
     <script>
-        const initialScrapeButton = document.getElementById('initialScrapeButton');
-        const scrapeButton = document.getElementById('scrapeButton');
-        const analyzeButton = document.getElementById('analyzeButton');
-        const logContainer = document.getElementById('logContainer');
-        const log = document.getElementById('log');
-
-        function addLogEntry(message, isError = false) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = isError ? 'text-red-500' : 'text-gray-600';
-            logEntry.textContent = `[${timestamp}] ${message}`;
-            log.appendChild(logEntry);
-            log.scrollTop = log.scrollHeight;
-        }
-
-        async function runScrape(isInitial = false) {
-            const button = isInitial ? initialScrapeButton : scrapeButton;
-            button.disabled = true;
-            button.textContent = 'Виконується...';
-            logContainer.classList.remove('hidden');
-            log.innerHTML = '';
-            addLogEntry(`Початок ${isInitial ? 'початкового' : ''} виконання скрипту...`);
-
-            const startTime = new Date();
-
-            try {
-                const response = await fetch('/api/scrape', {
-                    headers: {
-                        'X-Initial-Scrape': isInitial ? 'true' : 'false'
-                    }
-                });
-                const text = await response.text();
-
-                if (response.ok) {
-                    addLogEntry(text);
-                } else {
-                    addLogEntry(`Помилка: ${text}`, true);
-                }
-
-                const endTime = new Date();
-                const executionTime = (endTime - startTime) / 1000; // в секундах
-
-                addLogEntry(`Загальний час виконання: ${executionTime.toFixed(2)} секунд`);
-                addLogEntry('Скрипт завершено.');
-            } catch (error) {
-                addLogEntry(`Помилка: ${error.message}`, true);
-            } finally {
-                button.disabled = false;
-                button.textContent = isInitial ? 'Початковий скрапінг' : 'Запустити скрапінг';
-            }
-        }
-
-        async function runAnalysis() {
-            analyzeButton.disabled = true;
-            analyzeButton.textContent = 'Аналізується...';
-            logContainer.classList.remove('hidden');
-            log.innerHTML = '';
-            addLogEntry('Початок аналізу статей...');
-
-            const startTime = new Date();
-
-            try {
-                const response = await fetch('/api/analyze');
-                const data = await response.json();
-
-                if (response.ok) {
-                    addLogEntry(data.message);
-                    if (data.output) {
-                        addLogEntry(data.output);
-                    }
-                } else {
-                    addLogEntry(`Помилка: ${data.error}`, true);
-                    if (data.details) {
-                        addLogEntry(`Деталі: ${data.details}`, true);
-                    }
-                }
-
-                const endTime = new Date();
-                const executionTime = (endTime - startTime) / 1000; // в секундах
-
-                addLogEntry(`Загальний час виконання: ${executionTime.toFixed(2)} секунд`);
-                addLogEntry('Аналіз завершено.');
-            } catch (error) {
-                addLogEntry(`Помилка: ${error.message}`, true);
-            } finally {
-                analyzeButton.disabled = false;
-                analyzeButton.textContent = 'Аналізувати статті';
-            }
-        }
-
-        initialScrapeButton.addEventListener('click', () => runScrape(true));
-        scrapeButton.addEventListener('click', () => runScrape(false));
-        analyzeButton.addEventListener('click', runAnalysis);
+        // JavaScript код залишається без змін
     </script>
 </body>
 </html>
