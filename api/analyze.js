@@ -48,7 +48,7 @@ async function analyzeArticles(req, res) {
 
       // Аналіз статті за допомогою Perplexity API
       const perplexityRequestBody = {
-        model: 'sonar-medium-online',  // Змінено на підтримувану модель
+        model: 'llama-2-70b-chat',  // Оновлено на офіційно підтримувану модель
         messages: [
           { role: 'system', content: 'You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine.' },
           { role: 'user', content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
@@ -57,46 +57,51 @@ async function analyzeArticles(req, res) {
 
       console.log('Запит до Perplexity API:', JSON.stringify(perplexityRequestBody, null, 2));
 
-      const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(perplexityRequestBody)
-      });
+      try {
+        const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(perplexityRequestBody)
+        });
 
-      if (!perplexityResponse.ok) {
-        const errorBody = await perplexityResponse.text();
-        throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${errorBody}`);
-      }
-
-      const perplexityData = await perplexityResponse.json();
-      console.log('Відповідь від Perplexity API:', JSON.stringify(perplexityData, null, 2));
-
-      const aiResponse = perplexityData.choices[0].message.content;
-      const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]);
-      const isRelatedToUkraine = aiResponse.toLowerCase().includes('related to ukraine');
-
-      // Оновлення Google Sheets з оцінкою релевантності та статусом
-      let newStatus = status;
-      if (!isRelatedToUkraine) {
-        newStatus = 'Забраковано';
-      } else if (relevanceScore >= 8) {
-        newStatus = 'Facebook';
-      }
-
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: process.env.SPREADSHEET_ID,
-        range: `B${index + 2}:E${index + 2}`,
-        valueInputOption: 'USER_ENTERED',
-        resource: {
-          values: [[newStatus, link, text, relevanceScore]]
+        if (!perplexityResponse.ok) {
+          const errorBody = await perplexityResponse.text();
+          throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${errorBody}`);
         }
-      });
 
-      analyzedCount++;
-      console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: ${title}, Оцінка: ${relevanceScore}, Статус: ${newStatus}`);
+        const perplexityData = await perplexityResponse.json();
+        console.log('Відповідь від Perplexity API:', JSON.stringify(perplexityData, null, 2));
+
+        const aiResponse = perplexityData.choices[0].message.content;
+        const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]);
+        const isRelatedToUkraine = aiResponse.toLowerCase().includes('related to ukraine');
+
+        // Оновлення Google Sheets з оцінкою релевантності та статусом
+        let newStatus = status;
+        if (!isRelatedToUkraine) {
+          newStatus = 'Забраковано';
+        } else if (relevanceScore >= 8) {
+          newStatus = 'Facebook';
+        }
+
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: process.env.SPREADSHEET_ID,
+          range: `B${index + 2}:E${index + 2}`,
+          valueInputOption: 'USER_ENTERED',
+          resource: {
+            values: [[newStatus, link, text, relevanceScore]]
+          }
+        });
+
+        analyzedCount++;
+        console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: ${title}, Оцінка: ${relevanceScore}, Статус: ${newStatus}`);
+      } catch (error) {
+        console.error(`Помилка при аналізі статті "${title}":`, error);
+        // Продовжуємо аналіз наступних статей
+      }
 
       // Додаємо затримку між запитами, щоб уникнути обмежень API
       await new Promise(resolve => setTimeout(resolve, 1000));
