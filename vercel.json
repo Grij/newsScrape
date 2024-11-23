@@ -8,15 +8,5 @@
     { "src": "/api/scrape", "dest": "/api/scrape.js" },
     { "src": "/api/analyze", "dest": "/api/analyze.js" },
     { "src": "/(.*)", "dest": "/index.html" }
-  ],
-  "functions": {
-    "api/scrape.js": {
-      "memory": 1024,
-      "maxDuration": 60
-    },
-    "api/analyze.js": {
-      "memory": 1024,
-      "maxDuration": 60
-    }
-  }
+  ]
 }
