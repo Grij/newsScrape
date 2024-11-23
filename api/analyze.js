@@ -27,7 +27,7 @@ async function analyzeArticles(req, res) {
     console.log('Отримання даних з Google Sheets...');
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.SPREADSHEET_ID,
-      range: 'Articles!A2:E',
+      range: 'Articles!A2:F',
     });
 
     const rows = response.data.values;
@@ -40,15 +40,15 @@ async function analyzeArticles(req, res) {
     let analyzedCount = 0;
 
     for (const [index, row] of rows.entries()) {
-      if (!Array.isArray(row) || row.length < 5) {
-        console.warn(`Пропущено некоректний рядок з індексом ${index}`);
+      if (!Array.isArray(row) || row.length < 1) {
+        console.warn(`Пропущено некоректний рядок з індексом ${index + 2}`);
         continue;
       }
 
-      const [title, status, link, text, relevance] = row;
+      const [title, status, link, text, relevance, score] = row;
       
-      if (relevance || status === 'Забраковано') {
-        console.log(`Пропущено статтю "${title}" (вже оброблена або забракована)`);
+      if (score) {
+        console.log(`Пропущено статтю "${title}" (вже має оцінку)`);
         continue;
       }
 
@@ -89,7 +89,7 @@ async function analyzeArticles(req, res) {
         const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]) || 0;
         const isRelatedToUkraine = aiResponse.toLowerCase().includes('related to ukraine');
 
-        let newStatus = status;
+        let newStatus = status || 'Неопубліковано';
         if (!isRelatedToUkraine) {
           newStatus = 'Забраковано';
         } else if (relevanceScore >= 8) {
@@ -99,10 +99,10 @@ async function analyzeArticles(req, res) {
         console.log(`Оновлення Google Sheets для статті "${title}"...`);
         await sheets.spreadsheets.values.update({
           spreadsheetId: process.env.SPREADSHEET_ID,
-          range: `B${index + 2}:E${index + 2}`,
+          range: `B${index + 2}:F${index + 2}`,
           valueInputOption: 'USER_ENTERED',
           resource: {
-            values: [[newStatus, link, text, relevanceScore]]
+            values: [[newStatus, link || '', text || '', relevance || '', relevanceScore]]
           }
         });
 
