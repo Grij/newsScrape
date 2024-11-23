@@ -3,7 +3,14 @@ const fetch = require('node-fetch');
 
 function getAuthClient() {
   try {
-    const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+    console.log(`Шлях до файлу облікових даних: ${credentialsPath}`);
+    
+    if (!credentialsPath) {
+      throw new Error('GOOGLE_APPLICATION_CREDENTIALS не встановлено');
+    }
+
+    const credentials = require(credentialsPath);
     return new google.auth.JWT(
       credentials.client_email,
       null,
@@ -24,7 +31,7 @@ async function analyzeArticles(req, res) {
     const auth = getAuthClient();
     const sheets = google.sheets({ version: 'v4', auth });
 
-    // Отримання даних з Google Sheets
+    console.log('Отримання даних з Google Sheets...');
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.SPREADSHEET_ID,
       range: 'Articles!A2:E',
@@ -35,18 +42,25 @@ async function analyzeArticles(req, res) {
       throw new Error('Не знайдено даних у таблиці');
     }
 
+    console.log(`Знайдено ${rows.length} рядків для аналізу`);
+
     let analyzedCount = 0;
 
-    // Аналіз кожної статті
     for (const [index, row] of rows.entries()) {
+      if (!Array.isArray(row) || row.length < 5) {
+        console.warn(`Пропущено некоректний рядок з індексом ${index}`);
+        continue;
+      }
+
       const [title, status, link, text, relevance] = row;
       
-      // Пропускаємо статті, які вже мають оцінку релевантності або статус "Забраковано"
-      if (relevance || status === 'Забраковано') continue;
+      if (relevance || status === 'Забраковано') {
+        console.log(`Пропущено статтю "${title}" (вже оброблена або забракована)`);
+        continue;
+      }
 
-      console.log(`Аналізуємо статтю: ${title}`);
+      console.log(`Аналізуємо статтю: "${title}"`);
 
-      // Аналіз статті за допомогою Perplexity API
       const perplexityRequestBody = {
         model: "llama-3.1-sonar-small-128k-online",
         messages: [
@@ -55,20 +69,11 @@ async function analyzeArticles(req, res) {
         ],
         temperature: 0.2,
         top_p: 0.9,
-        max_tokens: 150,
-        search_domain_filter: ["perplexity.ai"],
-        return_images: false,
-        return_related_questions: false,
-        search_recency_filter: "month",
-        top_k: 0,
-        stream: false,
-        presence_penalty: 0,
-        frequency_penalty: 1
+        max_tokens: 150
       };
 
-      console.log('Запит до Perplexity API:', JSON.stringify(perplexityRequestBody, null, 2));
-
       try {
+        console.log('Відправка запиту до Perplexity API...');
         const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
           method: 'POST',
           headers: {
@@ -80,6 +85,7 @@ async function analyzeArticles(req, res) {
 
         if (!perplexityResponse.ok) {
           const errorText = await perplexityResponse.text();
+          console.error("Perplexity API error:", perplexityResponse.status, perplexityResponse.statusText, errorText);
           throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${errorText}`);
         }
 
@@ -87,10 +93,9 @@ async function analyzeArticles(req, res) {
         console.log('Відповідь від Perplexity API:', JSON.stringify(responseData, null, 2));
 
         const aiResponse = responseData.choices[0].message.content;
-        const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]);
+        const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]) || 0;
         const isRelatedToUkraine = aiResponse.toLowerCase().includes('related to ukraine');
 
-        // Оновлення Google Sheets з оцінкою релевантності та статусом
         let newStatus = status;
         if (!isRelatedToUkraine) {
           newStatus = 'Забраковано';
@@ -98,6 +103,7 @@ async function analyzeArticles(req, res) {
           newStatus = 'Facebook';
         }
 
+        console.log(`Оновлення Google Sheets для статті "${title}"...`);
         await sheets.spreadsheets.values.update({
           spreadsheetId: process.env.SPREADSHEET_ID,
           range: `B${index + 2}:E${index + 2}`,
@@ -108,13 +114,11 @@ async function analyzeArticles(req, res) {
         });
 
         analyzedCount++;
-        console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: ${title}, Оцінка: ${relevanceScore}, Статус: ${newStatus}`);
+        console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: "${title}", Оцінка: ${relevanceScore}, Статус: ${newStatus}`);
       } catch (error) {
         console.error(`Помилка при аналізі статті "${title}":`, error);
-        // Продовжуємо аналіз наступних статей
       }
 
-      // Додаємо затримку між запитами, щоб уникнути обмежень API
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
