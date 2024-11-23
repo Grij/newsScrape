@@ -2,11 +2,22 @@
   "version": 2,
   "builds": [
     { "src": "api/*.js", "use": "@vercel/node" },
+    { "src": "api/*.py", "use": "@vercel/python" },
     { "src": "*.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/scrape", "dest": "/api/scrape.js" },
+    { "src": "/api/scrape", "dest": "/api/scrape.py" },
     { "src": "/api/analyze", "dest": "/api/analyze.js" },
     { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/scrape?type=manual",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/analyze",
+      "schedule": "5 16 * * *"
+    }
   ]
 }

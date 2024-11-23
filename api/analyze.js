@@ -44,27 +44,36 @@ async function analyzeArticles(req, res) {
       // Пропускаємо статті, які вже мають оцінку релевантності або статус "Забраковано"
       if (relevance || status === 'Забраковано') continue;
 
+      console.log(`Аналізуємо статтю: ${title}`);
+
       // Аналіз статті за допомогою Perplexity API
+      const perplexityRequestBody = {
+        model: 'mistral-7b-instruct',
+        messages: [
+          { role: 'system', content: 'You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine.' },
+          { role: 'user', content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
+        ]
+      };
+
+      console.log('Запит до Perplexity API:', JSON.stringify(perplexityRequestBody, null, 2));
+
       const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${process.env.PERPLEXITY_API_KEY}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          model: 'mistral-7b-instruct',
-          messages: [
-            { role: 'system', content: 'You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine.' },
-            { role: 'user', content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
-          ]
-        })
+        body: JSON.stringify(perplexityRequestBody)
       });
 
       if (!perplexityResponse.ok) {
-        throw new Error(`Помилка API Perplexity: ${perplexityResponse.statusText}`);
+        const errorBody = await perplexityResponse.text();
+        throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${errorBody}`);
       }
 
       const perplexityData = await perplexityResponse.json();
+      console.log('Відповідь від Perplexity API:', JSON.stringify(perplexityData, null, 2));
+
       const aiResponse = perplexityData.choices[0].message.content;
       const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]);
       const isRelatedToUkraine = aiResponse.toLowerCase().includes('related to ukraine');

@@ -2,5 +2,8 @@
   "dependencies": {
     "googleapis": "^92.0.0",
     "node-fetch": "^2.6.7"
+  },
+  "scripts": {
+    "start": "node api/server.js"
   }
 }

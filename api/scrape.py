@@ -117,7 +117,9 @@ def setup_dropdown(sheet, spreadsheet_id):
                                 "type": "ONE_OF_LIST",
                                 "values": [
                                     {"userEnteredValue": "Неопубліковано"},
-                                    {"userEnteredValue": "Опубліковано"}
+                                    {"userEnteredValue": "Опубліковано"},
+                                    {"userEnteredValue": "Забраковано"},
+                                    {"userEnteredValue": "Facebook"}
                                 ]
                             },
                             "showCustomUi": True,
@@ -149,15 +151,15 @@ def save_articles_to_sheet(sheet, spreadsheet_id, articles, is_initial=False):
         get_or_create_sheet(sheet, spreadsheet_id, 'Articles')
         get_or_create_sheet(sheet, spreadsheet_id, 'ProcessedArticles')
         
-        values = [["Заголовок", "Статус", "Посилання", "Текст"]] if is_initial else []
+        values = [["Заголовок", "Статус", "Посилання", "Текст", "Релевантність"]] if is_initial else []
         for article in articles:
             text = get_clean_text(article['url'])
-            values.append([article['title'], "Неопубліковано", article['url'], text])
+            values.append([article['title'], "Неопубліковано", article['url'], text, ""])
         
         body = {'values': values}
-        range_name = 'Articles!A1' if is_initial else 'Articles!A1:D1'
+        range_name = 'Articles!A1' if is_initial else 'Articles!A1:E1'
         if is_initial:
-            sheet.values().clear(spreadsheetId=spreadsheet_id, range='Articles!A:D').execute()
+            sheet.values().clear(spreadsheetId=spreadsheet_id, range='Articles!A:E').execute()
             sheet.values().clear(spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:C').execute()
         
         result = sheet.values().append(
@@ -196,7 +198,7 @@ def scrape(is_initial_scrape=False):
         
         html_content = fetch_page_content(URL)
         if not html_content:
-            return "Failed to fetch page content"
+            return json.dumps({"error": "Failed to fetch page content"})
 
         articles = parse_articles(html_content)
 
@@ -214,33 +216,31 @@ def scrape(is_initial_scrape=False):
                 result = "No new articles found."
         
         logging.info(result)
+        return json.dumps({"message": result})
         
     except Exception as e:
         logging.error(f"An error occurred: {str(e)}")
-        return f"Error: {str(e)}"
-    
-    end_time = datetime.now()
-    execution_time = (end_time - start_time).total_seconds()
-    logging.info(f"Script finished. Execution time: {execution_time:.2f} seconds.")
-    return f"{result} Execution time: {execution_time:.2f} seconds."
+        return json.dumps({"error": str(e)})
 
 class handler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/api/scrape':
+        if self.path.startswith('/api/scrape'):
             try:
-                is_initial_scrape = self.headers.get('X-Initial-Scrape') == 'true'
+                is_initial_scrape = 'type=first' in self.path
                 result = scrape(is_initial_scrape)
                 self.send_response(200)
-                self.send_header('Content-type', 'text/plain')
+                self.send_header('Content-type', 'application/json')
                 self.end_headers()
                 self.wfile.write(result.encode())
             except Exception as e:
-                error_message = f"An error occurred: {str(e)}\n"
-                error_message += f"Environment variables:\n"
-                for key, value in os.environ.items():
-                    if key.startswith('GOOGLE_') or key == 'SPREADSHEET_ID':
-                        error_message += f"{key}: {'Set' if value else 'Not set'}\n"
-                self.send_error(500, error_message)
+                error_message = json.dumps({
+                    "error": str(e),
+                    "details": {key: 'Set' if value else 'Not set' for key, value in os.environ.items() if key.startswith('GOOGLE_') or key == 'SPREADSHEET_ID'}
+                })
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(error_message.encode())
         else:
             self.send_error(404)
 
