@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scraper Dashboard</title>
+    <title>Скрапер для Трампа</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Додаткові стилі */
         .btn {
             @apply px-4 py-2 rounded transition duration-200 ease-in-out;
         }
@@ -16,19 +15,75 @@
         .btn-secondary {
             @apply bg-gray-500 text-white hover:bg-gray-600;
         }
+        .btn-outline {
+            @apply border border-gray-300 text-gray-700 hover:bg-gray-100;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-6 text-center">Scraper Dashboard</h1>
+<body class="min-h-screen flex flex-col bg-gray-100">
+    <header class="bg-blue-600 text-white p-4">
+        <h1 class="text-3xl font-bold text-center">Скрапер для Трампа</h1>
+        <p class="text-xl text-center mt-2">Вийди звідси, розбійник</p>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
         <div class="flex flex-col space-y-4 mb-6">
-            <button id="scrapeBtn" class="btn btn-primary">Запустити скрапінг</button>
-            <button id="analyzeBtn" class="btn btn-secondary">Аналізувати статті</button>
+            <button id="firstScrapeBtn" class="btn btn-primary">Перший скрапінг</button>
+            <button id="manualScrapeBtn" class="btn btn-secondary">Ручний скрапінг</button>
+            <button id="analyzeBtn" class="btn btn-outline">Ручний аналіз статей</button>
         </div>
         <div id="logContainer" class="bg-white p-4 rounded shadow-md h-64 overflow-y-auto"></div>
-    </div>
+    </main>
+
+    <footer class="bg-gray-200 p-4">
+        <div class="container mx-auto flex flex-col items-center">
+            <div class="flex space-x-4 mb-4">
+                <a href="http://t.me/orest_trump" target="_blank" rel="noopener noreferrer" class="text-2xl">
+                    📱
+                </a>
+                <a href="https://twitter.com/orest_trump" target="_blank" rel="noopener noreferrer" class="text-2xl">
+                    🐦
+                </a>
+            </div>
+            <img src="https://arleysign.com/wp-content/uploads/2019/10/1109_50.png" alt="Logo" width="100" height="100" class="mb-2">
+            <p class="text-sm text-gray-600">Розробка Масонів</p>
+            <p class="text-sm text-gray-600">2024</p>
+        </div>
+    </footer>
+
     <script>
-        // JavaScript код залишається без змін
+        document.getElementById('firstScrapeBtn').addEventListener('click', () => {
+            fetch('/api/scrape?type=first')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('logContainer').innerHTML += `<p>${data.message}</p>`;
+                })
+                .catch(error => {
+                    document.getElementById('logContainer').innerHTML += `<p>Помилка: ${error}</p>`;
+                });
+        });
+
+        document.getElementById('manualScrapeBtn').addEventListener('click', () => {
+            fetch('/api/scrape?type=manual')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('logContainer').innerHTML += `<p>${data.message}</p>`;
+                })
+                .catch(error => {
+                    document.getElementById('logContainer').innerHTML += `<p>Помилка: ${error}</p>`;
+                });
+        });
+
+        document.getElementById('analyzeBtn').addEventListener('click', () => {
+            fetch('/api/analyze')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('logContainer').innerHTML += `<p>${data.message}</p>`;
+                })
+                .catch(error => {
+                    document.getElementById('logContainer').innerHTML += `<p>Помилка: ${error}</p>`;
+                });
+        });
     </script>
 </body>
 </html>
