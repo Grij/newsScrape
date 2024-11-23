@@ -1,7 +1,6 @@
 const { google } = require('googleapis');
 const fetch = require('node-fetch');
 
-// Функція для створення клієнта auth
 function getAuthClient() {
   try {
     const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
@@ -35,6 +34,8 @@ async function analyzeArticles(req, res) {
     if (!rows || rows.length === 0) {
       throw new Error('Не знайдено даних у таблиці');
     }
+
+    let analyzedCount = 0;
 
     // Аналіз кожної статті
     for (const row of rows) {
@@ -76,14 +77,16 @@ async function analyzeArticles(req, res) {
         }
       });
 
+      analyzedCount++;
       console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: ${title}, Оцінка: ${relevanceScore}`);
     }
 
     const endTime = Date.now();
     const executionTime = (endTime - startTime) / 1000;
-    console.log(`[${new Date().toLocaleTimeString()}] Аналіз завершено. Загальний час виконання: ${executionTime.toFixed(2)} секунд`);
+    const message = `Аналіз завершено. Проаналізовано статей: ${analyzedCount}. Загальний час виконання: ${executionTime.toFixed(2)} секунд`;
+    console.log(`[${new Date().toLocaleTimeString()}] ${message}`);
 
-    res.status(200).json({ message: 'Аналіз статей завершено успішно', executionTime });
+    res.status(200).json({ message, executionTime, analyzedCount });
   } catch (error) {
     console.error(`[${new Date().toLocaleTimeString()}] Помилка:`, error);
     res.status(500).json({ error: 'An error occurred while processing articles', details: error.message });

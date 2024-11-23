@@ -52,38 +52,60 @@
     </footer>
 
     <script>
-        document.getElementById('firstScrapeBtn').addEventListener('click', () => {
-            fetch('/api/scrape?type=first')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('logContainer').innerHTML += `<p>${data.message}</p>`;
-                })
-                .catch(error => {
-                    document.getElementById('logContainer').innerHTML += `<p>Помилка: ${error}</p>`;
-                });
-        });
+  function appendLog(message) {
+    const logContainer = document.getElementById('logContainer');
+    const logEntry = document.createElement('p');
+    logEntry.textContent = message;
+    logContainer.appendChild(logEntry);
+    logContainer.scrollTop = logContainer.scrollHeight;
+  }
 
-        document.getElementById('manualScrapeBtn').addEventListener('click', () => {
-            fetch('/api/scrape?type=manual')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('logContainer').innerHTML += `<p>${data.message}</p>`;
-                })
-                .catch(error => {
-                    document.getElementById('logContainer').innerHTML += `<p>Помилка: ${error}</p>`;
-                });
-        });
+  document.getElementById('firstScrapeBtn').addEventListener('click', () => {
+    appendLog('Початок першого скрапінгу...');
+    fetch('/api/scrape?type=first')
+      .then(response => response.json())
+      .then(data => {
+        appendLog(data.message || 'Перший скрапінг завершено');
+      })
+      .catch(error => {
+        appendLog(`Помилка: ${error.message}`);
+      });
+  });
 
-        document.getElementById('analyzeBtn').addEventListener('click', () => {
-            fetch('/api/analyze')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('logContainer').innerHTML += `<p>${data.message}</p>`;
-                })
-                .catch(error => {
-                    document.getElementById('logContainer').innerHTML += `<p>Помилка: ${error}</p>`;
-                });
-        });
-    </script>
+  document.getElementById('manualScrapeBtn').addEventListener('click', () => {
+    appendLog('Початок ручного скрапінгу...');
+    fetch('/api/scrape?type=manual')
+      .then(response => response.json())
+      .then(data => {
+        appendLog(data.message || 'Ручний скрапінг завершено');
+      })
+      .catch(error => {
+        appendLog(`Помилка: ${error.message}`);
+      });
+  });
+
+  document.getElementById('analyzeBtn').addEventListener('click', () => {
+    appendLog('Початок аналізу статей...');
+    fetch('/api/analyze')
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          appendLog(`Помилка: ${data.error}`);
+          if (data.details) appendLog(`Деталі: ${data.details}`);
+        } else {
+          appendLog(data.message || 'Аналіз статей завершено');
+          if (data.analyzedCount !== undefined) {
+            appendLog(`Проаналізовано статей: ${data.analyzedCount}`);
+          }
+          if (data.executionTime !== undefined) {
+            appendLog(`Час виконання: ${data.executionTime.toFixed(2)} секунд`);
+          }
+        }
+      })
+      .catch(error => {
+        appendLog(`Помилка: ${error.message}`);
+      });
+  });
+</script>
 </body>
 </html>
