@@ -48,11 +48,22 @@ async function analyzeArticles(req, res) {
 
       // Аналіз статті за допомогою Perplexity API
       const perplexityRequestBody = {
-        model: 'llama-2-70b-chat',
+        model: "llama-3.1-sonar-small-128k-online",
         messages: [
-          { role: 'system', content: 'You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine.' },
-          { role: 'user', content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
-        ]
+          { role: "system", content: "You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine." },
+          { role: "user", content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
+        ],
+        temperature: 0.2,
+        top_p: 0.9,
+        max_tokens: 150,
+        search_domain_filter: ["perplexity.ai"],
+        return_images: false,
+        return_related_questions: false,
+        search_recency_filter: "month",
+        top_k: 0,
+        stream: false,
+        presence_penalty: 0,
+        frequency_penalty: 1
       };
 
       console.log('Запит до Perplexity API:', JSON.stringify(perplexityRequestBody, null, 2));
@@ -67,23 +78,13 @@ async function analyzeArticles(req, res) {
           body: JSON.stringify(perplexityRequestBody)
         });
 
-        let responseData;
-        const contentType = perplexityResponse.headers.get("content-type");
-        if (contentType && contentType.indexOf("application/json") !== -1) {
-          responseData = await perplexityResponse.json();
-        } else {
-          responseData = await perplexityResponse.text();
-        }
-
         if (!perplexityResponse.ok) {
-          throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${JSON.stringify(responseData)}`);
+          const errorText = await perplexityResponse.text();
+          throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${errorText}`);
         }
 
+        const responseData = await perplexityResponse.json();
         console.log('Відповідь від Perplexity API:', JSON.stringify(responseData, null, 2));
-
-        if (typeof responseData === 'string') {
-          throw new Error(`Неочікувана відповідь від API: ${responseData}`);
-        }
 
         const aiResponse = responseData.choices[0].message.content;
         const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]);
