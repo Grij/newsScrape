@@ -27,7 +27,7 @@ async function analyzeArticles(req, res) {
     // Отримання даних з Google Sheets
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: process.env.SPREADSHEET_ID,
-      range: 'A2:E', // Припускаємо, що дані починаються з другого рядка
+      range: 'Articles!A2:E',
     });
 
     const rows = response.data.values;
@@ -38,11 +38,11 @@ async function analyzeArticles(req, res) {
     let analyzedCount = 0;
 
     // Аналіз кожної статті
-    for (const row of rows) {
-      const [date, title, link, status, relevance] = row;
+    for (const [index, row] of rows.entries()) {
+      const [title, status, link, text, relevance] = row;
       
-      // Пропускаємо статті, які вже мають оцінку релевантності або статус "Rejected"
-      if (relevance || status === 'Rejected') continue;
+      // Пропускаємо статті, які вже мають оцінку релевантності або статус "Забраковано"
+      if (relevance || status === 'Забраковано') continue;
 
       // Аналіз статті за допомогою Perplexity API
       const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -54,8 +54,8 @@ async function analyzeArticles(req, res) {
         body: JSON.stringify({
           model: 'mistral-7b-instruct',
           messages: [
-            { role: 'system', content: 'You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10.' },
-            { role: 'user', content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation: "${title}"` }
+            { role: 'system', content: 'You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine.' },
+            { role: 'user', content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
           ]
         })
       });
@@ -65,20 +65,29 @@ async function analyzeArticles(req, res) {
       }
 
       const perplexityData = await perplexityResponse.json();
-      const relevanceScore = parseInt(perplexityData.choices[0].message.content);
+      const aiResponse = perplexityData.choices[0].message.content;
+      const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]);
+      const isRelatedToUkraine = aiResponse.toLowerCase().includes('related to ukraine');
 
-      // Оновлення Google Sheets з оцінкою релевантності
+      // Оновлення Google Sheets з оцінкою релевантності та статусом
+      let newStatus = status;
+      if (!isRelatedToUkraine) {
+        newStatus = 'Забраковано';
+      } else if (relevanceScore >= 8) {
+        newStatus = 'Facebook';
+      }
+
       await sheets.spreadsheets.values.update({
         spreadsheetId: process.env.SPREADSHEET_ID,
-        range: `E${rows.indexOf(row) + 2}`, // +2 because rows are 0-indexed and we start from the second row
+        range: `B${index + 2}:E${index + 2}`,
         valueInputOption: 'USER_ENTERED',
         resource: {
-          values: [[relevanceScore]]
+          values: [[newStatus, link, text, relevanceScore]]
         }
       });
 
       analyzedCount++;
-      console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: ${title}, Оцінка: ${relevanceScore}`);
+      console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: ${title}, Оцінка: ${relevanceScore}, Статус: ${newStatus}`);
     }
 
     const endTime = Date.now();
@@ -93,4 +102,10 @@ async function analyzeArticles(req, res) {
   }
 }
 
-module.exports = analyzeArticles;
+module.exports = (req, res) => {
+  if (req.method === 'GET') {
+    analyzeArticles(req, res);
+  } else {
+    res.status(405).json({ error: 'Method Not Allowed' });
+  }
+};
