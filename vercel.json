@@ -18,10 +18,5 @@
       "memory": 1024,
       "maxDuration": 60
     }
-  },
-  "env": {
-    "GOOGLE_APPLICATION_CREDENTIALS": "@google-credentials",
-    "SPREADSHEET_ID": "@spreadsheet-id",
-    "PERPLEXITY_API_KEY": "@perplexity-api-key"
   }
 }
