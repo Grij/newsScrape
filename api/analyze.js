@@ -3,14 +3,7 @@ const fetch = require('node-fetch');
 
 function getAuthClient() {
   try {
-    const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-    console.log(`Шлях до файлу облікових даних: ${credentialsPath}`);
-    
-    if (!credentialsPath) {
-      throw new Error('GOOGLE_APPLICATION_CREDENTIALS не встановлено');
-    }
-
-    const credentials = require(credentialsPath);
+    const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
     return new google.auth.JWT(
       credentials.client_email,
       null,
