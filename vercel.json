@@ -1,20 +1,27 @@
 {
   "version": 2,
+  "builds": [
+    { "src": "api/*.js", "use": "@vercel/node" },
+    { "src": "*.html", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/scrape", "dest": "/api/scrape.js" },
+    { "src": "/api/analyze", "dest": "/api/analyze.js" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
   "functions": {
-    "api/scrape.py": {
+    "api/scrape.js": {
       "memory": 1024,
       "maxDuration": 60
-    }
-  },
-  "routes": [
-    { "src": "/api/scrape", "dest": "/api/scrape.py" }
-  ]
-}
-{
-  "functions": {
+    },
     "api/analyze.js": {
       "memory": 1024,
       "maxDuration": 60
     }
+  },
+  "env": {
+    "GOOGLE_APPLICATION_CREDENTIALS": "@google-credentials",
+    "SPREADSHEET_ID": "@spreadsheet-id",
+    "PERPLEXITY_API_KEY": "@perplexity-api-key"
   }
 }
