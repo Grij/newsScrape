@@ -48,7 +48,7 @@ async function analyzeArticles(req, res) {
 
       // Аналіз статті за допомогою Perplexity API
       const perplexityRequestBody = {
-        model: 'mistral-7b-instruct',
+        model: 'sonar-medium-online',  // Змінено на підтримувану модель
         messages: [
           { role: 'system', content: 'You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine.' },
           { role: 'user', content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
@@ -97,6 +97,9 @@ async function analyzeArticles(req, res) {
 
       analyzedCount++;
       console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: ${title}, Оцінка: ${relevanceScore}, Статус: ${newStatus}`);
+
+      // Додаємо затримку між запитами, щоб уникнути обмежень API
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     const endTime = Date.now();
