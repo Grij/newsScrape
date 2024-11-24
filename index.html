@@ -1,57 +1,57 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Скрапер для Трампа</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .btn {
-            @apply px-4 py-2 rounded transition duration-200 ease-in-out;
-        }
-        .btn-primary {
-            @apply bg-blue-500 text-white hover:bg-blue-600;
-        }
-        .btn-secondary {
-            @apply bg-gray-500 text-white hover:bg-gray-600;
-        }
-        .btn-outline {
-            @apply border border-gray-300 text-gray-700 hover:bg-gray-100;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Скрапер для Трампа</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .btn {
+      @apply px-4 py-2 rounded transition duration-200 ease-in-out;
+    }
+    .btn-primary {
+      @apply bg-blue-500 text-white hover:bg-blue-600;
+    }
+    .btn-secondary {
+      @apply bg-gray-500 text-white hover:bg-gray-600;
+    }
+    .btn-outline {
+      @apply border border-gray-300 text-gray-700 hover:bg-gray-100;
+    }
+  </style>
 </head>
 <body class="min-h-screen flex flex-col bg-gray-100">
-    <header class="bg-blue-600 text-white p-4">
-        <h1 class="text-3xl font-bold text-center">Скрапер для Трампа</h1>
-        <p class="text-xl text-center mt-2">Вийди звідси, розбійник</p>
-    </header>
+  <header class="bg-blue-600 text-white p-4">
+    <h1 class="text-3xl font-bold text-center">Скрапер для Трампа</h1>
+    <p class="text-xl text-center mt-2">Вийди звідси, розбійник</p>
+  </header>
 
-    <main class="flex-grow container mx-auto px-4 py-8">
-        <div class="flex flex-col space-y-4 mb-6">
-            <button id="firstScrapeBtn" class="btn btn-primary">Перший скрапінг</button>
-            <button id="manualScrapeBtn" class="btn btn-secondary">Ручний скрапінг</button>
-            <button id="analyzeBtn" class="btn btn-outline">Ручний аналіз статей</button>
-        </div>
-        <div id="logContainer" class="bg-white p-4 rounded shadow-md h-64 overflow-y-auto"></div>
-    </main>
+  <main class="flex-grow container mx-auto px-4 py-8">
+    <div class="flex flex-col space-y-4 mb-6">
+      <button id="firstScrapeBtn" class="btn btn-primary">Перший скрапінг</button>
+      <button id="manualScrapeBtn" class="btn btn-secondary">Ручний скрапінг</button>
+      <button id="analyzeBtn" class="btn btn-outline">Ручний аналіз статей</button>
+    </div>
+    <div id="logContainer" class="bg-white p-4 rounded shadow-md h-64 overflow-y-auto"></div>
+  </main>
 
-    <footer class="bg-gray-200 p-4">
-        <div class="container mx-auto flex flex-col items-center">
-            <div class="flex space-x-4 mb-4">
-                <a href="http://t.me/orest_trump" target="_blank" rel="noopener noreferrer" class="text-2xl">
-                    📱
-                </a>
-                <a href="https://twitter.com/orest_trump" target="_blank" rel="noopener noreferrer" class="text-2xl">
-                    🐦
-                </a>
-            </div>
-            <img src="https://arleysign.com/wp-content/uploads/2019/10/1109_50.png" alt="Logo" width="100" height="100" class="mb-2">
-            <p class="text-sm text-gray-600">Розробка Масонів</p>
-            <p class="text-sm text-gray-600">2024</p>
-        </div>
-    </footer>
+  <footer class="bg-gray-200 p-4">
+    <div class="container mx-auto flex flex-col items-center">
+      <div class="flex space-x-4 mb-4">
+        <a href="http://t.me/orest_trump" target="_blank" rel="noopener noreferrer" class="text-2xl">
+          <img src="data:image/svg+xml;base64,{{ svgTelegram }}" alt="Telegram" width="32" height="32">
+        </a>
+        <a href="https://twitter.com/orest_trump" target="_blank" rel="noopener noreferrer" class="text-2xl">
+          <img src="data:image/svg+xml;base64,{{ svgTwitter }}" alt="Twitter" width="32" height="32">
+        </a>
+      </div>
+      <img src="https://arleysign.com/wp-content/uploads/2019/10/1109_50.png" alt="Logo" width="100" height="100" class="mb-2">
+      <p class="text-sm text-gray-600">Розробка Масонів</p>
+      <p class="text-sm text-gray-600">2024</p>
+    </div>
+  </footer>
 
-    <script>
+  <script>
     function appendLog(message) {
         const logContainer = document.getElementById('logContainer');
         const logEntry = document.createElement('p');
@@ -115,5 +115,7 @@
             });
     });
     </script>
-</body>
-</html>
+  <script>
+    const svgTelegram = `PD94bWwgdmVyc2lvbj0iMS4wIiA/PjxzdmcgaWQ9IkxheWVyXzEiIHN0eWxlPSJlbmFibGUtYmFja2dyb3VuZDpuZXcgMCAwIDEwMCAxMDA7IiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiB4bWw6c3BhY2U9InByZXNlcnZlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj48cGF0aCBkPSJNOTUsOS45Yy0xLjMtMS4xLTMuNC0xLjItNy0wLjFjMCwwLDAsMCwwLDBjLTIuNSwwLjgtMjQuNyw5LjItNDQuMywxNy4zYy0xNy42LDcuMy0zMS45LDEzLjctMzMuNiwxNC41ICBjLTEuOSwwLjYtNiwyLjQtNi4yLDUuMmMtMC4xLDEuOCwxLjQsMy40LDQuMyw0LjdjMy4xLDEuNiwxNi44LDYuMiwxOS43LDcuMWMxLDMuNCw2LjksMjMuMyw7LjIsMjQuNWMwLjQsMS44LDEuNiwyLjgsMi4yLDMuMiAgYzAuMSwwLjEsMC4zLDAuMywwLjUsMC40YzAuMywwLjIsMC43LDAuMywxLjIsMC4zYzAuNywwLDEuNS0wLjMsMi4yLTAuOGMzLjctMywxMC4xLTkuNywxMS45LTExLjZjNy45LDYuMiwxNi41LDEzLjEsMTcuMywxMy45ICBjMCwwLDAuMSwwLjEsMC4xLDAuMWMxLjksMS42LDMuOSwyLjUsNS43LDIuNWMwLjYsMCwxLjItMC4xLDEuOC0wLjNjMi4xLTAuNywzLjYtMi43LDQuMS01LjRjMC0wLjEsMC4xLTAuNSwwLjMtMS4yICBjMy40LTE0LjgsNi4xLTI3LjgsOC4zLTM4LjdjMi4xLTEwLjcsMy44LTIxLjIsNC44LTI2LjhjMC4yLTEuNCwwLjQtMi41LDAuNS0zLjJDOTYuMywxMy41LDk2LjUsMTEuMiw5NSw5Ljl6IE0zMCw1OC4zbDQ3LjctMzEuNiAgYzAuMS0wLjEsMC4zLTAuMiwwLjQtMC4zYzAsMCwwLDAsMCwwYzAuMSwwLDAuMS0wLjEsMC4yLTAuMWMwLjEsMCwwLjEsMCwwLjItMC4xYy0wLjEsMC4xLTAuMiwwLjQtMC40LDAuNkw2NiwzOC4xICBjLTguNCw3LjctMTkuNCwxNy44LTI2LjcsMjQuNGMwLDAsMCwwLDAsMC4xYzAsMC0wLjEsMC4xLTAuMSwwLjFjMCwwLDAsMC4xLTAuMSwwLjFjMCwwLjEsMCwwLjEtMC4xLDAuMmMwLDAsMCwwLjEsMCwwLjEgIGMwLDAsMCwwLDAsMC4xYy0wLjUsNS42LTEuNCwxNS4yLTEuOCwxOS41YzAsMCwwLDAsMC0wLjFDMzYuOCw4MS40LDMxLjIsNjIuMywzMCw1OC4zeiIvPjwvc3ZnPg==`;
+    const svgTwitter = `PD94bWwgdmVyc2lvbj0iMS4wIiA/PjwhRE9DVFlQRSBzdmcgIFBVQkxJQyAnLS8vVzNDLy9EVEQgU1ZHIDEuMS8vRU4nICAnaHR0cDovL3d3dy53My5vcmcvR3JhcGhpY3MvU1ZHLzEuMS9EVEQvc3ZnMTEuZHRkJz48c3ZnIGhlaWdodD0iNTEycHgiIGlkPSJUd2l0dGVyX2FsdCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNTEyIDUxMjsiIHZlcnNpb249IjEuMSIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHdpZHRoPSI1MTJweCIgeG1sOnNwYWNlPSJwcmVzZXJ2ZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+PHBhdHRlcm4gaGVpZ2h0PSI2OSIgaWQ9IlBvbGthX0RvdF9QYXR0ZXJuIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIiBzdHlsZT0ib3ZlcmZsb3c6dmlzaWJsZTsiIHZpZXdCb3g9IjIuMTI1IC03MC44OTYgNjkgNjkiIHdpZHRoPSI2OSIgeT0iNTEyIj48Zz48cG9seWdvbiBwb2ludHM9IjcxLjEyNSwtMS44OTYgMi4xMjUsLTEuODk2IDIuMTI1LC03MC44OTYgNzEuMTI1LC03MC44OTYgICAiIHN0eWxlPSJmaWxsOm5vbmU7Ii8+PHBvbHlnb24gcG9pbnRzPSI3MS4xMjUsLTEuODk2IDIuMTI1LC0xLjg5NiAyLjEyNSwtNzAuODk2IDcxLjEyNSwtNzAuODk2ICAgIiBzdHlsZT0iZmlsbDojRjZCQjYwOyIvPjxnPjxwYXRoIGQ9Ik02MS43NzItNzEuNjUzYzAuMDE4LDAuMDcyLDAuMDA3LDAuMTI3LTAuMDI2LDAuMTljLTAuMDUzLDAuMTAxLTAuMTEyLDAuMDYyLTAuMTY1LDAuMTI4ICAgICAgYy0wLjA1LDAuMDYyLTAuMDk5LDAuMjc2LTAuMDc5LDAuMzYyYy0wLjE2OSwwLjA1OC0wLjAxLDAuMjI3LTAuMDE1LDAuMzVjLTAuMDAyLDAuMDUtMC4wNDEsMC4xMDUtMC4wNDUsMC4xNjEgICAgICBjLTAuMDEsMC4xMTksMC4wMTcsMC4yNjYsMC4wNjgsMC4zN2MwLjA5NywwLjE5OCwwLjI2OCwwLjQxMywwLjQzNSwwLjU0NGMwLjE5LDAuMTQ4LDAuMzY1LDAuNTcyLDAuNjA4LDAuNjMxICAgICAgYzAuMTc3LDAuMDQyLDAuMzg0LTAuMTA0LDAuNTQzLTAuMTQzYzAuMTgtMC4wNDMsMC4zOTcsMC4wMSwwLjU3MS0wLjA1M2MwLjIyMi0wLjA3OSwwLjEyNy0wLjMzNywwLjI4OC0wLjQ1ICAgICAgYzAuMTA0LTAuMDc0LDAuMjg3LTAuMDEsMC40MDYtMC4wNTFjMC4yLTAuMDY5LDAuMzM5LTAuMjYzLDAuMzc2LTAuNDZjMC4wMTYtMC4wODIsMC4wMS0wLjE0NSwwLjAzOS0wLjIyMSAgICAgIGMwLjAzOS0wLjEwMywwLjExMS0wLjE2LDAuMDktMC4yOTNjLTAuMDEtMC4wNjItMC4wNTItMC4xMi0wLjA2NC0wLjE4N2MtMC4wMjItMC4xMTQsMC4wMDItMC4yMjQsMC0wLjMzNyAgICAgIGMtMC4wMDMtMC4yLDAuMDE3LTAuMzc5LTAuMDc4LTAuNTVjLTAuMzgtMC42ODgtMS4yMzYtMC45MjktMS45NzUtMC43ODljLTAuMTgsMC4wMzQtMC4yODcsMC4xMjYtMC40NDIsMC4yMDcgICAgICBjLTAuMTcsMC4wODgtMC4xMzksMC4xNjYtMC4zMTgsMC4yMjRjLTAuMDgxLDAuMDI2LTAuMjE2LDAuMTI0LTAuMjE1LDAuMjI0YzAuMDAxLDAuMTE1LDAuMDA1LDAuMDUxLDAuMDEyLDAuMTY5ICAgICAgYy0wLjAyMSwwLjAxMS0wLjAyMS0wLjAwNS0wLjAzLTAuMDI1IiBzdHlsZT0iZmlsbDojRkZGRkZGOyIvPjxwYXRoIGQ9Ik01NC4xMTA1LTcxLjY1M2MwLjAxOCwwLjA3MiwwLjAwNywwLjEyNy0wLjAyNiwwLjE5Yy0wLjA1MywwLjEwMS0wLjExMiwwLjA2Mi0wLjE2NSwwLjEyOCAgICAgYy0wLjA1LDAuMDYyLTAuMDk5LDAuMjc2LTAuMDc5LDAuMzYyYy0wLjE2OSwwLjA1OC0wLjAxLDAuMjI3LTAuMDE1LDAuMzVjLTAuMDAyLDAuMDUtMC4wNDEsMC4xMDUtMC4wNDUsMC4xNjEgICAgIGMtMC4wMSwwLjExOSwwLjAxNywwLjI2NiwwLjA2OCwwLjM3YzAuMDk3LDAuMTk4LDAuMjY4LDAuNDEzLDAuNDM1LDAuNTQ0YzAuMTksMC4xNDgsMC4zNjUsMC41NzIsMC42MDgsMC42MzEgICAgIGMwLjE3NywwLjA0MiwwLjM4NC0wLjEwNCwwLjU0My0wLjE0M2MwLjE4LTAuMDQzLDAuMzk3LDAuMDEsMC41NzEtMC4wNTNjMC4yMjItMC4wNzksMC4xMjctMC4zMzcsMC4yODgtMC40NSAgICAgYzAuMTA0LTAuMDc0LDAuMjg3LTAuMDEsMC40MDYtMC4wNTFjMC4yLTAuMDY5LDAuMzM5LTAuMjYzLDAuMzc2LTAuNDZjMC4wMTYtMC4wODIsMC4wMS0wLjE0NSwwLjAzOS0wLjIyMSAgICAgYzAuMDM5LTAuMTAzLDAuMTExLTAuMTYsMC4wOS0wLjI5M2MtMC4wMS0wLjA2Mi0wLjA1Mi0wLjEyLTAuMDY0LTAuMTg3Yy0wLjAyMi0wLjExNCwwLjAwMi0wLjIyNCwwLTAuMzM3ICAgICBjLTAuMDAzLTAuMiwwLjAxNy0wLjM3OS0wLjA3OC0wLjU1Yy0wLjM4LTAuNjg4LTEuMjM2LTAuOTI5LTEuOTc1LTAuNzg5Yy0wLjE4LDAuMDM0LTAuMjg3LDAuMTI2LTAuNDQyLDAuMjA3ICAgICBjLTAuMTcsMC4wODgtMC4xMzksMC4xNjYtMC4zMTgsMC4yMjRjLTAuMDgxLDAuMDI2LTAuMjE2LDAuMTI0LTAuMjE1LDAuMjI0YzAuMDAxLDAuMTE1LDAuMDA1LDAuMDUxLDAuMDEyLDAuMTY5ICAgICBjLTAuMDIxLDAuMDExLTAuMDIxLTAuMDA1LTAuMDMtMC4wMjUiIHN0eWxlPSJmaWxsOiNGRkZGRkY7Ii8+PHBhdGggZD0iTTIzLjQzOS03MS42NTNjMC4wMTgsMC4wNzIsMC4wMDcsMC4xMjctMC4wMjYsMC4xOWMtMC4wNTMsMC4xMDEtMC4xMTIsMC4wNjItMC4xNjUsMC4xMjggICAgIGMtMC4wNSwwLjA2Mi0wLjA5OSwwLjI3Ni0wLjA3OSwwLjM2MmMtMC4xNjksMC4wNTgtMC4wMSwwLjIyNy0wLjAxNSwwLjM1Yy0wLjAwMiwwLjA1LTAuMDQxLDAuMTA1LTAuMDQ1LDAuMTYxICAgIGMtMC4wMSwwLjExOSwwLjAxNywwLjI2NiwwLjA2OCwwLjM3YzAuMDk3LDAuMTk4LDAuMjY4LDAuNDEzLDAuNDM1LDAuNTQ0YzAuMTksMC4xNDgsMC4zNjUsMC41NzIsMC42MDgsMC42MzEgICAgIGMwLjE3NywwLjA0MiwwLjM4NC0wLjEwNCwwLjU0My0wLjE0M2MwLjE4LTAuMDQzLDAuMzk3LDAuMDEsMC41NzEtMC4wNTNjMC4yMjItMC4wNzksMC4xMjctMC4zMzcsMC4yODgtMC40NSAgICAgYzAuMTA0LTAuMDc0LDAuMjg3LTAuMDEsMC40MDYtMC4wNTFjMC4yLTAuMDY5LDAuMzM5LTAuMjYzLDAuMzc2LTAuNDZjMC4wMTYtMC4wODIsMC4wMS0wLjE0NSwwLjAzOS0wLjIyMSAgICAgYzAuMDM5LTAuMTAzLDAuMTExLTAuMTYsMC4wOS0wLjI5M2MtMC4wMS0wLjA2Mi0wLjA1Mi0wLjEyLTAuMDY0LTAuMTg3Yy0wLjAyMi0wLjExNCwwLjAwMi0wLjIyNCwwLTAuMzM3ICAgICBjLTAuMDAzLTAuMiwwLjAxNy0wLjM3OS0wLjA3OC0wLjU1Yy0wLjM4LTAuNjg4LTEuMjM2LTAuOTI5LTEuOTc1LTAuNzg5Yy0wLjE4LDAuMDM0LTAuMjg3LDAuMTI2LTAuNDQyLDAuMjA3ICAgICBjLTAuMTcsMC4wODgtMC4xMzksMC4xNjYtMC4zMTgsMC4yMjRjLTAuMDgxLDAuMDI2LTAuMjE2LDAuMTI0LTAuMjE1LDAuMjI0YzAuMDAxLDAuMTE1LDAuMDA1LDAuMDUxLDAuMDEyLDAuMTY5ICAgICBjLTAuMDIxLDAuMDExLTAuMDIxLTAuMDA1LTAuMDMtMC4wMjUiIHN0eWxlPSJmaWxsOiNGRkZGRkY7Ii8+PC9nPjxnPjwvZz48L2c+PC9wYXR0ZXJuPjxwYXRoIGQ9Ik00MjMuMDAzLDE3MC4zNTJjMC4xNjEsMy42ODgsMC4yNDYsNy40MTMsMC4yNDYsMTEuMTM4ICBjMCwxMTMuODY4LTg2LjY2NiwyNDUuMTctMjQ1LjE2LDI0NS4xN2MtNDguNjY5LDAtOTMuOTU3LTE0LjI2LTEzMi4wODktMzguNzE3YzYuNzQsMC43OTUsMTMuNjAxLDEuMjExLDIwLjU2MSwxLjIxMSAgYzQwLjM2MiwwLDc3LjUxMy0xMy43ODUsMTA3LjAwNi0zNi44OTNjLTM3LjcwMi0wLjY4OC02OS41MjQtMjUuNjExLTgwLjQ5LTU5LjgzMmM1LjI2OSwxLjAwNCwxMC42NjEsMS41NDEsMTYuMjEsMS41NDEgIGM3Ljg1NCwwLDE1LjQ3Ni0xLjA1MSwyMi43MDYtMy4wMjVjLTM5LjQxOC03LjkxNC02OS4xMi00Mi43MzgtNjkuMTItODQuNDg0YzAtMC4zNjgsMC0wLjcyMywwLTEuMDkxICBjMTEuNjE2LDYuNDU4LDI0LjkwLDEwLjMzLDM5LjAzOSwxMC43ODNjLTIzLjEyMi0xNS40NTEtMzguMzQtNDEuODMyLTM4LjM0LTcxLjcyOWMwLTE1Ljc4Miw0LjI1MS0zMC41ODMsMTEuNjY1LTQzLjMxNSAgYzQyLjUwNiw1Mi4xMzcsMTA1Ljk4OSw4Ni40MzQsMTc3LjYwOCw5MC4wMzZjLTEuNDctNi4zMS0yLjIyOS0xMi44OS0yLjIyOS0xOS42NDJjMC00Ny41OTEsMzguNTg1LTg2LjE2NCw4Ni4xNjMtODYuMTY0ICBjMjQuNzg3LDAsNDcuMTc1LDEwLjQ2NCw2Mi44OTUsMjcuMjE1YzE5LjYzMS0zLjg3MywzOC4wNzEtMTEuMDQxLDU0LjcyNC0yMC45MTdjLTYuNDMzLDIwLjExOS0yMC4wOTcsMzcuMDA0LTM3Ljg4Nyw0Ny42NzYgIGMxNy40MjQtMi4wODMsMzQuMDM5LTYuNzE1LDQ5LjQ5LTEzLjU3N0M0NTQuNDQ1LDE0My4wMjcsNDM5Ljg0LDE1OC4xOTYsNDIzLjAwMywxNzAuMzUyeiIgc3R5bGU9ImZpbGwtcnVsZTpldmVub2RkO2NsaXAtcnVsZTpldmVub2RkOyIvPjwvc3ZnPg==`;
+  </script>
