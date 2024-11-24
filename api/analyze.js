@@ -16,6 +16,10 @@ function getAuthClient() {
   }
 }
 
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function analyzeArticles(req, res) {
   console.log('[' + new Date().toLocaleTimeString() + '] Початок аналізу статей...');
   const startTime = Date.now();
@@ -136,7 +140,13 @@ async function analyzeArticles(req, res) {
       }
 
       // Додаємо затримку між запитами
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await sleep(2000);
+
+      // Перевіряємо, чи не минуло забагато часу
+      if (Date.now() - startTime > 50000) { // 50 секунд
+        console.log('Досягнуто ліміту часу виконання. Зупиняємо аналіз.');
+        break;
+      }
     }
 
     const endTime = Date.now();
