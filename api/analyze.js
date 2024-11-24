@@ -41,15 +41,15 @@ async function analyzeArticles(req, res) {
     let facebookCount = 0;
 
     for (const [index, row] of rows.entries()) {
-      if (!Array.isArray(row) || row.length < 1) {
+      if (!Array.isArray(row) || row.length < 2) {
         console.warn(`Пропущено некоректний рядок з індексом ${index + 2}`);
         continue;
       }
 
       const [title, status, link, text, relevance, score] = row;
       
-      if (score) {
-        console.log(`Пропущено статтю "${title}" (вже має оцінку)`);
+      if (status !== 'Неопубліковано') {
+        console.log(`Пропущено статтю "${title}" (статус не "Неопубліковано")`);
         continue;
       }
 
@@ -98,8 +98,8 @@ async function analyzeArticles(req, res) {
         const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]) || 0;
         const isRelatedToUkraine = aiResponse.toLowerCase().includes('related to ukraine');
 
-        let newStatus = status || 'Неопубліковано';
-        if (!isRelatedToUkraine) {
+        let newStatus = 'Неопубліковано';
+        if (!isRelatedToUkraine || relevanceScore < 3) {
           newStatus = 'Забраковано';
         } else if (relevanceScore >= 8 && facebookCount < 2) {
           newStatus = 'Facebook';
