@@ -81,22 +81,13 @@ async function analyzeArticles(req, res) {
           body: JSON.stringify(perplexityRequestBody)
         });
 
-        let responseData;
-        const responseText = await perplexityResponse.text();
-        console.log('Текст відповіді від Perplexity API:', responseText);
-
         if (!perplexityResponse.ok) {
-          throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${responseText}`);
+          const errorText = await perplexityResponse.text();
+          throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${errorText}`);
         }
 
-        try {
-          responseData = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error('Помилка при розборі JSON відповіді:', parseError);
-          throw new Error(`Неможливо розібрати відповідь як JSON: ${responseText}`);
-        }
-
-        console.log('Розібрана відповідь від Perplexity API:', JSON.stringify(responseData, null, 2));
+        const responseData = await perplexityResponse.json();
+        console.log('Відповідь від Perplexity API:', JSON.stringify(responseData, null, 2));
 
         const aiResponse = responseData.choices[0].message.content;
         const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]) || 0;
