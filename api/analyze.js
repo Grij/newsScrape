@@ -55,18 +55,18 @@ async function analyzeArticles(req, res) {
 
       console.log(`Аналізуємо статтю: "${title}"`);
 
-      const perplexityRequestBody = {
-        model: "llama-3.1-sonar-small-128k-online",
-        messages: [
-          { role: "system", content: "You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine." },
-          { role: "user", content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
-        ],
-        temperature: 0.2,
-        top_p: 0.9,
-        max_tokens: 150
-      };
-
       try {
+        const perplexityRequestBody = {
+          model: "llama-3.1-sonar-small-128k-online",
+          messages: [
+            { role: "system", content: "You are an AI assistant that analyzes article titles and provides a relevance score from 1 to 10. Also, determine if the article is related to Ukraine." },
+            { role: "user", content: `Analyze the following article title and provide a relevance score from 1 to 10, where 10 is highly relevant to technology and innovation. Also, indicate if it's related to Ukraine: "${title}"` }
+          ],
+          temperature: 0.2,
+          top_p: 0.9,
+          max_tokens: 150
+        };
+
         console.log('Відправка запиту до Perplexity API...');
         const perplexityResponse = await fetch('https://api.perplexity.ai/chat/completions', {
           method: 'POST',
@@ -120,9 +120,23 @@ async function analyzeArticles(req, res) {
         console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: "${title}", Оцінка: ${relevanceScore}, Статус: ${newStatus}`);
       } catch (articleError) {
         console.error(`Помилка при аналізі статті "${title}":`, articleError);
+        // Додаємо деталі помилки до Google Sheets
+        try {
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: process.env.SPREADSHEET_ID,
+            range: `B${index + 2}:F${index + 2}`,
+            valueInputOption: 'USER_ENTERED',
+            resource: {
+              values: [['Помилка аналізу', link || '', text || '', relevance || '', `Помилка: ${articleError.message}`]]
+            }
+          });
+        } catch (updateError) {
+          console.error(`Не вдалося оновити статус помилки в Google Sheets:`, updateError);
+        }
         continue;
       }
 
+      // Додаємо затримку між запитами
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
