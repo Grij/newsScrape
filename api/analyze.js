@@ -133,11 +133,10 @@ async function analyzeArticles(req, res) {
         } catch (updateError) {
           console.error(`Не вдалося оновити статус помилки в Google Sheets:`, updateError);
         }
-        continue;
       }
 
       // Додаємо затримку між запитами
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
 
     const endTime = Date.now();
