@@ -77,14 +77,22 @@ async function analyzeArticles(req, res) {
           body: JSON.stringify(perplexityRequestBody)
         });
 
+        let responseData;
+        const responseText = await perplexityResponse.text();
+        console.log('Текст відповіді від Perplexity API:', responseText);
+
         if (!perplexityResponse.ok) {
-          const errorText = await perplexityResponse.text();
-          console.error("Perplexity API error:", perplexityResponse.status, perplexityResponse.statusText, errorText);
-          throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${errorText}`);
+          throw new Error(`Помилка API Perplexity: ${perplexityResponse.status} ${perplexityResponse.statusText}\nТіло відповіді: ${responseText}`);
         }
 
-        const responseData = await perplexityResponse.json();
-        console.log('Відповідь від Perplexity API:', JSON.stringify(responseData, null, 2));
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Помилка при розборі JSON відповіді:', parseError);
+          throw new Error(`Неможливо розібрати відповідь як JSON: ${responseText}`);
+        }
+
+        console.log('Розібрана відповідь від Perplexity API:', JSON.stringify(responseData, null, 2));
 
         const aiResponse = responseData.choices[0].message.content;
         const relevanceScore = parseInt(aiResponse.match(/\d+/)[0]) || 0;
@@ -110,8 +118,9 @@ async function analyzeArticles(req, res) {
 
         analyzedCount++;
         console.log(`[${new Date().toLocaleTimeString()}] Проаналізовано статтю: "${title}", Оцінка: ${relevanceScore}, Статус: ${newStatus}`);
-      } catch (error) {
-        console.error(`Помилка при аналізі статті "${title}":`, error);
+      } catch (articleError) {
+        console.error(`Помилка при аналізі статті "${title}":`, articleError);
+        continue;
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -125,7 +134,7 @@ async function analyzeArticles(req, res) {
     res.status(200).json({ message, executionTime, analyzedCount });
   } catch (error) {
     console.error(`[${new Date().toLocaleTimeString()}] Помилка:`, error);
-    res.status(500).json({ error: 'An error occurred while processing articles', details: error.message });
+    res.status(500).json({ error: 'An error occurred while processing articles', details: error.toString() });
   }
 }
 
