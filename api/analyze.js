@@ -38,6 +38,7 @@ async function analyzeArticles(req, res) {
     console.log(`Знайдено ${rows.length} рядків для аналізу`);
 
     let analyzedCount = 0;
+    let facebookCount = 0;
 
     for (const [index, row] of rows.entries()) {
       if (!Array.isArray(row) || row.length < 1) {
@@ -92,8 +93,9 @@ async function analyzeArticles(req, res) {
         let newStatus = status || 'Неопубліковано';
         if (!isRelatedToUkraine) {
           newStatus = 'Забраковано';
-        } else if (relevanceScore >= 8) {
+        } else if (relevanceScore >= 8 && facebookCount < 2) {
           newStatus = 'Facebook';
+          facebookCount++;
         }
 
         console.log(`Оновлення Google Sheets для статті "${title}"...`);
