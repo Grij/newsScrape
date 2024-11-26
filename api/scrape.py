@@ -154,13 +154,16 @@ def зберегти_статті_в_лист(sheet, spreadsheet_id, articles, i
         values = [["Заголовок", "Статус", "Посилання", "Текст", "Релевантність"]] if is_initial else []
         for article in articles:
             text = отримати_чистий_текст(article['url'])
-            values.append([article['title'], {"userEnteredValue": "Неопубліковано"}, article['url'], text, ""])
+            values.append([article['title'], "Неопубліковано", article['url'], text, ""])
         
         body = {'values': values}
         range_name = 'Articles!A1' if is_initial else 'Articles!A1:E1'
         if is_initial:
             sheet.values().clear(spreadsheetId=spreadsheet_id, range='Articles!A:E').execute()
             sheet.values().clear(spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:C').execute()
+        
+        logging.info(f"Спроба вставки {len(values)} рядків даних")
+        logging.debug(f"Перший рядок даних: {values[0] if values else 'Немає даних'}")
         
         result = sheet.values().append(
             spreadsheetId=spreadsheet_id,
@@ -170,7 +173,7 @@ def зберегти_статті_в_лист(sheet, spreadsheet_id, articles, i
         ).execute()
         
         # Оновити лист ProcessedArticles
-        processed_values = [[article['title'], {"userEnteredValue": "Неопубліковано"}, article['url']] for article in articles]
+        processed_values = [[article['title'], "Неопубліковано", article['url']] for article in articles]
         sheet.values().append(
             spreadsheetId=spreadsheet_id,
             range='ProcessedArticles!A1',
