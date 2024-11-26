@@ -14,26 +14,27 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 URL = "https://babel.ua/news"
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+BATCH_SIZE = 10  # Розмір партії для обробки статей
 
-def check_env_vars():
+def перевірити_змінні_середовища():
     creds = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
-    logging.info(f"GOOGLE_APPLICATION_CREDENTIALS: {'Set' if creds else 'Not set'}")
+    logging.info(f"GOOGLE_APPLICATION_CREDENTIALS: {'Встановлено' if creds else 'Не встановлено'}")
     if creds:
-        logging.info(f"Length of GOOGLE_APPLICATION_CREDENTIALS: {len(creds)}")
+        logging.info(f"Довжина GOOGLE_APPLICATION_CREDENTIALS: {len(creds)}")
     
     spreadsheet_id = os.environ.get('SPREADSHEET_ID')
-    logging.info(f"SPREADSHEET_ID: {spreadsheet_id if spreadsheet_id else 'Not set'}")
+    logging.info(f"SPREADSHEET_ID: {spreadsheet_id if spreadsheet_id else 'Не встановлено'}")
 
-def fetch_page_content(url):
+def отримати_вміст_сторінки(url):
     try:
         response = requests.get(url)
         response.raise_for_status()
         return response.text
     except requests.RequestException as e:
-        logging.error(f"Error fetching page: {e}")
+        logging.error(f"Помилка отримання сторінки: {e}")
         return None
 
-def parse_articles(html_content):
+def розібрати_статті(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
     articles = soup.select("div.c-entry-content-box")
     parsed_articles = []
@@ -43,10 +44,10 @@ def parse_articles(html_content):
             url = link['href']
             title = link.text.strip()
             parsed_articles.append({'url': url, 'title': title})
-    logging.info(f"Parsed {len(parsed_articles)} articles")
+    logging.info(f"Розібрано {len(parsed_articles)} статей")
     return parsed_articles
 
-def get_clean_text(url):
+def отримати_чистий_текст(url):
     try:
         response = requests.get(url)
         response.raise_for_status()
@@ -56,34 +57,34 @@ def get_clean_text(url):
             text = article_div.get_text(separator=' ', strip=True).replace('\xa0', ' ')
             return text
         else:
-            return "Article content not found."
+            return "Вміст статті не знайдено."
     except requests.exceptions.RequestException as e:
-        return f"Error downloading page: {e}"
+        return f"Помилка завантаження сторінки: {e}"
     except Exception as e:
-        return f"Error processing page: {e}"
+        return f"Помилка обробки сторінки: {e}"
 
-def setup_sheets():
+def налаштувати_sheets():
     try:
         creds_json = os.environ['GOOGLE_APPLICATION_CREDENTIALS']
         creds_dict = json.loads(creds_json)
         creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
         service = build('sheets', 'v4', credentials=creds)
-        logging.info("Successfully set up Google Sheets service")
+        logging.info("Успішно налаштовано сервіс Google Sheets")
         return service.spreadsheets()
     except Exception as e:
-        logging.error(f"Error setting up Google Sheets: {e}")
+        logging.error(f"Помилка налаштування Google Sheets: {e}")
         raise
 
-def get_or_create_sheet(sheet, spreadsheet_id, sheet_name):
+def отримати_або_створити_лист(sheet, spreadsheet_id, sheet_name):
     try:
         sheet_metadata = sheet.get(spreadsheetId=spreadsheet_id).execute()
         sheets = sheet_metadata.get('sheets', '')
         for s in sheets:
             if s['properties']['title'] == sheet_name:
-                logging.info(f"Sheet '{sheet_name}' already exists")
+                logging.info(f"Лист '{sheet_name}' вже існує")
                 return
         
-        logging.info(f"Sheet '{sheet_name}' not found. Creating it.")
+        logging.info(f"Лист '{sheet_name}' не знайдено. Створюємо його.")
         body = {
             'requests': [{
                 'addSheet': {
@@ -95,10 +96,10 @@ def get_or_create_sheet(sheet, spreadsheet_id, sheet_name):
         }
         sheet.batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
     except HttpError as error:
-        logging.error(f"An error occurred: {error}")
+        logging.error(f"Виникла помилка: {error}")
         raise
 
-def setup_dropdown(sheet, spreadsheet_id):
+def налаштувати_випадаючий_список(sheet, spreadsheet_id):
     try:
         sheet_id = 0  # ID листа "Articles"
         body = {
@@ -119,7 +120,6 @@ def setup_dropdown(sheet, spreadsheet_id):
                                     {"userEnteredValue": "Неопубліковано"},
                                     {"userEnteredValue": "Опубліковано"},
                                     {"userEnteredValue": "Забраковано"},
-                                    {"userEnteredValue": "Facebook"}
                                 ]
                             },
                             "showCustomUi": True,
@@ -130,31 +130,31 @@ def setup_dropdown(sheet, spreadsheet_id):
             ]
         }
         sheet.batchUpdate(spreadsheetId=spreadsheet_id, body=body).execute()
-        logging.info("Dropdown for status column set up successfully")
+        logging.info("Випадаючий список для колонки статусу успішно налаштовано")
     except HttpError as error:
-        logging.error(f"An error occurred while setting up dropdown: {error}")
+        logging.error(f"Виникла помилка при налаштуванні випадаючого списку: {error}")
         raise
 
-def get_processed_articles(sheet, spreadsheet_id):
+def отримати_оброблені_статті(sheet, spreadsheet_id):
     try:
-        get_or_create_sheet(sheet, spreadsheet_id, 'ProcessedArticles')
+        отримати_або_створити_лист(sheet, spreadsheet_id, 'ProcessedArticles')
         result = sheet.values().get(spreadsheetId=spreadsheet_id, range='ProcessedArticles!A:C').execute()
-        processed = set(row[2] for row in result.get('values', [])[1:])  # Skip header
-        logging.info(f"Retrieved {len(processed)} processed articles")
+        processed = set(row[2] for row in result.get('values', [])[1:])  # Пропустити заголовок
+        logging.info(f"Отримано {len(processed)} оброблених статей")
         return processed
     except HttpError as error:
-        logging.error(f"An error occurred while fetching processed articles: {error}")
+        logging.error(f"Виникла помилка при отриманні оброблених статей: {error}")
         raise
 
-def save_articles_to_sheet(sheet, spreadsheet_id, articles, is_initial=False):
+def зберегти_статті_в_лист(sheet, spreadsheet_id, articles, is_initial=False):
     try:
-        get_or_create_sheet(sheet, spreadsheet_id, 'Articles')
-        get_or_create_sheet(sheet, spreadsheet_id, 'ProcessedArticles')
+        отримати_або_створити_лист(sheet, spreadsheet_id, 'Articles')
+        отримати_або_створити_лист(sheet, spreadsheet_id, 'ProcessedArticles')
         
         values = [["Заголовок", "Статус", "Посилання", "Текст", "Релевантність"]] if is_initial else []
         for article in articles:
-            text = get_clean_text(article['url'])
-            values.append([article['title'], "Неопубліковано", article['url'], text, ""])
+            text = отримати_чистий_текст(article['url'])
+            values.append([article['title'], {"userEnteredValue": "Неопубліковано"}, article['url'], text, ""])
         
         body = {'values': values}
         range_name = 'Articles!A1' if is_initial else 'Articles!A1:E1'
@@ -169,8 +169,8 @@ def save_articles_to_sheet(sheet, spreadsheet_id, articles, is_initial=False):
             body=body
         ).execute()
         
-        # Update ProcessedArticles sheet
-        processed_values = [[article['title'], "Неопубліковано", article['url']] for article in articles]
+        # Оновити лист ProcessedArticles
+        processed_values = [[article['title'], {"userEnteredValue": "Неопубліковано"}, article['url']] for article in articles]
         sheet.values().append(
             spreadsheetId=spreadsheet_id,
             range='ProcessedArticles!A1',
@@ -178,48 +178,50 @@ def save_articles_to_sheet(sheet, spreadsheet_id, articles, is_initial=False):
             body={'values': processed_values}
         ).execute()
         
-        logging.info(f"Added {len(articles)} articles to the sheet")
+        logging.info(f"Додано {len(articles)} статей до листа")
         return result.get('updates').get('updatedCells')
     except HttpError as error:
-        logging.error(f"An error occurred while saving articles: {error}")
+        logging.error(f"Виникла помилка при збереженні статей: {error}")
         raise
 
-def scrape(is_initial_scrape=False):
+def скрапінг(is_initial_scrape=False):
     start_time = datetime.now()
-    logging.info(f"{'Initial' if is_initial_scrape else 'Regular'} scraping started.")
+    logging.info(f"{'Початковий' if is_initial_scrape else 'Регулярний'} скрапінг розпочато.")
     
-    check_env_vars()
+    перевірити_змінні_середовища()
     
     try:
-        sheet = setup_sheets()
+        sheet = налаштувати_sheets()
         spreadsheet_id = os.environ.get('SPREADSHEET_ID')
         if not spreadsheet_id:
-            raise ValueError("SPREADSHEET_ID environment variable is not set")
+            raise ValueError("Змінна середовища SPREADSHEET_ID не встановлена")
         
-        html_content = fetch_page_content(URL)
+        html_content = отримати_вміст_сторінки(URL)
         if not html_content:
-            return json.dumps({"error": "Failed to fetch page content"})
+            return json.dumps({"error": "Не вдалося отримати вміст сторінки"})
 
-        articles = parse_articles(html_content)
+        articles = розібрати_статті(html_content)
 
         if is_initial_scrape:
-            updated_cells = save_articles_to_sheet(sheet, spreadsheet_id, articles, is_initial=True)
-            setup_dropdown(sheet, spreadsheet_id)
-            result = f"Initial scraping completed. Added {len(articles)} articles. Updated {updated_cells} cells."
+            updated_cells = зберегти_статті_в_лист(sheet, spreadsheet_id, articles, is_initial=True)
+            налаштувати_випадаючий_список(sheet, spreadsheet_id)
+            result = f"Початковий скрапінг завершено. Додано {len(articles)} статей. Оновлено {updated_cells} клітинок."
         else:
-            processed_articles = get_processed_articles(sheet, spreadsheet_id)
+            processed_articles = отримати_оброблені_статті(sheet, spreadsheet_id)
             new_articles = [article for article in articles if article['url'] not in processed_articles]
-            if new_articles:
-                updated_cells = save_articles_to_sheet(sheet, spreadsheet_id, new_articles)
-                result = f"Added {len(new_articles)} new articles. Updated {updated_cells} cells."
-            else:
-                result = "No new articles found."
+            total_updated_cells = 0
+            for i in range(0, len(new_articles), BATCH_SIZE):
+                batch = new_articles[i:i+BATCH_SIZE]
+                updated_cells = зберегти_статті_в_лист(sheet, spreadsheet_id, batch)
+                total_updated_cells += updated_cells
+                logging.info(f"Оброблено партію {i//BATCH_SIZE + 1} з {len(new_articles)//BATCH_SIZE + 1}")
+            result = f"Додано {len(new_articles)} нових статей партіями. Оновлено {total_updated_cells} клітинок."
         
         logging.info(result)
         return json.dumps({"message": result})
         
     except Exception as e:
-        logging.error(f"An error occurred: {str(e)}")
+        logging.error(f"Виникла помилка: {str(e)}")
         return json.dumps({"error": str(e)})
 
 class handler(BaseHTTPRequestHandler):
@@ -227,7 +229,7 @@ class handler(BaseHTTPRequestHandler):
         if self.path.startswith('/api/scrape'):
             try:
                 is_initial_scrape = 'type=first' in self.path
-                result = scrape(is_initial_scrape)
+                result = скрапінг(is_initial_scrape)
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
@@ -235,7 +237,7 @@ class handler(BaseHTTPRequestHandler):
             except Exception as e:
                 error_message = json.dumps({
                     "error": str(e),
-                    "details": {key: 'Set' if value else 'Not set' for key, value in os.environ.items() if key.startswith('GOOGLE_') or key == 'SPREADSHEET_ID'}
+                    "details": {key: 'Встановлено' if value else 'Не встановлено' for key, value in os.environ.items() if key.startswith('GOOGLE_') or key == 'SPREADSHEET_ID'}
                 })
                 self.send_response(500)
                 self.send_header('Content-type', 'application/json')
@@ -245,4 +247,4 @@ class handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
 if __name__ == "__main__":
-    print(scrape(True))
+    print(скрапінг(True))
