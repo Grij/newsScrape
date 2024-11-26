@@ -119,7 +119,6 @@ def setup_dropdown(sheet, spreadsheet_id):
                                     {"userEnteredValue": "Неопубліковано"},
                                     {"userEnteredValue": "Опубліковано"},
                                     {"userEnteredValue": "Забраковано"},
-                                    {"userEnteredValue": "Facebook"}
                                 ]
                             },
                             "showCustomUi": True,
