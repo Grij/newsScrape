@@ -2,7 +2,8 @@ import os
 import json
 import logging
 from datetime import datetime
-import requests
+import asyncio
+import aiohttp
 from bs4 import BeautifulSoup
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -14,7 +15,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 URL = "https://babel.ua/news"
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-BATCH_SIZE = 10  # Розмір партії для обробки статей
+BATCH_SIZE = 10
 
 def перевірити_змінні_середовища():
     creds = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
@@ -25,14 +26,14 @@ def перевірити_змінні_середовища():
     spreadsheet_id = os.environ.get('SPREADSHEET_ID')
     logging.info(f"SPREADSHEET_ID: {spreadsheet_id if spreadsheet_id else 'Не встановлено'}")
 
-def отримати_вміст_сторінки(url):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        return response.text
-    except requests.RequestException as e:
-        logging.error(f"Помилка отримання сторінки: {e}")
-        return None
+async def отримати_вміст_сторінки(url):
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url) as response:
+                return await response.text()
+        except Exception as e:
+            logging.error(f"Помилка отримання сторінки: {e}")
+            return None
 
 def розібрати_статті(html_content):
     soup = BeautifulSoup(html_content, 'html.parser')
@@ -47,21 +48,18 @@ def розібрати_статті(html_content):
     logging.info(f"Розібрано {len(parsed_articles)} статей")
     return parsed_articles
 
-def отримати_чистий_текст(url):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, 'html.parser')
-        article_div = soup.find('div', class_='c-post-text js-article-content')
-        if article_div:
-            text = article_div.get_text(separator=' ', strip=True).replace('\xa0', ' ')
-            return text
-        else:
-            return "Вміст статті не знайдено."
-    except requests.exceptions.RequestException as e:
-        return f"Помилка завантаження сторінки: {e}"
-    except Exception as e:
-        return f"Помилка обробки сторінки: {e}"
+async def отримати_чистий_текст(url):
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.get(url) as response:
+                content = await response.text()
+                soup = BeautifulSoup(content, 'html.parser')
+                article_div = soup.find('div', class_='c-post-text js-article-content')
+                if article_div:
+                    return article_div.get_text(separator=' ', strip=True).replace('\xa0', ' ')
+                return "Вміст статті не знайдено."
+        except Exception as e:
+            return f"Помилка обробки сторінки: {e}"
 
 def налаштувати_sheets():
     try:
@@ -146,14 +144,14 @@ def отримати_оброблені_статті(sheet, spreadsheet_id):
         logging.error(f"Виникла помилка при отриманні оброблених статей: {error}")
         raise
 
-def зберегти_статті_в_лист(sheet, spreadsheet_id, articles, is_initial=False):
+async def зберегти_статті_в_лист(sheet, spreadsheet_id, articles, is_initial=False):
     try:
         отримати_або_створити_лист(sheet, spreadsheet_id, 'Articles')
         отримати_або_створити_лист(sheet, spreadsheet_id, 'ProcessedArticles')
         
         values = [["Заголовок", "Статус", "Посилання", "Текст", "Релевантність"]] if is_initial else []
         for article in articles:
-            text = отримати_чистий_текст(article['url'])
+            text = await отримати_чистий_текст(article['url'])
             values.append([article['title'], "Неопубліковано", article['url'], text, ""])
         
         body = {'values': values}
@@ -187,7 +185,7 @@ def зберегти_статті_в_лист(sheet, spreadsheet_id, articles, i
         logging.error(f"Виникла помилка при збереженні статей: {error}")
         raise
 
-def скрапінг(is_initial_scrape=False):
+async def скрапінг(is_initial_scrape=False):
     start_time = datetime.now()
     logging.info(f"{'Початковий' if is_initial_scrape else 'Регулярний'} скрапінг розпочато.")
     
@@ -199,14 +197,14 @@ def скрапінг(is_initial_scrape=False):
         if not spreadsheet_id:
             raise ValueError("Змінна середовища SPREADSHEET_ID не встановлена")
         
-        html_content = отримати_вміст_сторінки(URL)
+        html_content = await отримати_вміст_сторінки(URL)
         if not html_content:
             return json.dumps({"error": "Не вдалося отримати вміст сторінки"})
 
         articles = розібрати_статті(html_content)
 
         if is_initial_scrape:
-            updated_cells = зберегти_статті_в_лист(sheet, spreadsheet_id, articles, is_initial=True)
+            updated_cells = await зберегти_статті_в_лист(sheet, spreadsheet_id, articles, is_initial=True)
             налаштувати_випадаючий_список(sheet, spreadsheet_id)
             result = f"Початковий скрапінг завершено. Додано {len(articles)} статей. Оновлено {updated_cells} клітинок."
         else:
@@ -215,7 +213,7 @@ def скрапінг(is_initial_scrape=False):
             total_updated_cells = 0
             for i in range(0, len(new_articles), BATCH_SIZE):
                 batch = new_articles[i:i+BATCH_SIZE]
-                updated_cells = зберегти_статті_в_лист(sheet, spreadsheet_id, batch)
+                updated_cells = await зберегти_статті_в_лист(sheet, spreadsheet_id, batch)
                 total_updated_cells += updated_cells
                 logging.info(f"Оброблено партію {i//BATCH_SIZE + 1} з {len(new_articles)//BATCH_SIZE + 1}")
             result = f"Додано {len(new_articles)} нових статей партіями. Оновлено {total_updated_cells} клітинок."
@@ -232,7 +230,9 @@ class handler(BaseHTTPRequestHandler):
         if self.path.startswith('/api/scrape'):
             try:
                 is_initial_scrape = 'type=first' in self.path
-                result = скрапінг(is_initial_scrape)
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(скрапінг(is_initial_scrape))
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.end_headers()
@@ -250,4 +250,5 @@ class handler(BaseHTTPRequestHandler):
             self.send_error(404)
 
 if __name__ == "__main__":
-    print(скрапінг(True))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(скрапінг(True))
