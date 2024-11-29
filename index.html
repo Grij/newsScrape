@@ -3,117 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Скрапер для Трампа</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Керування скраперами</title>
     <style>
-        .btn {
-            @apply px-4 py-2 rounded transition duration-200 ease-in-out;
-        }
-        .btn-primary {
-            @apply bg-blue-500 text-white hover:bg-blue-600;
-        }
-        .btn-secondary {
-            @apply bg-gray-500 text-white hover:bg-gray-600;
-        }
-        .btn-outline {
-            @apply border border-gray-300 text-gray-700 hover:bg-gray-100;
-        }
+        body { font-family: Arial, sans-serif; line-height: 1.6; padding: 20px; }
+        h1 { color: #333; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        #log { margin-top: 20px; padding: 10px; background-color: #f4f4f4; border: 1px solid #ddd; height: 300px; overflow-y: auto; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col bg-gray-100">
-    <header class="bg-blue-600 text-white p-4">
-        <h1 class="text-3xl font-bold text-center">Скрапер для Трампа</h1>
-        <p class="text-xl text-center mt-2">Вийди звідси, розбійник</p>
-    </header>
-
-    <main class="flex-grow container mx-auto px-4 py-8">
-        <div class="flex flex-col space-y-4 mb-6">
-            <button id="firstScrapeBtn" class="btn btn-primary">Перший скрапінг</button>
-            <button id="manualScrapeBtn" class="btn btn-secondary">Ручний скрапінг</button>
-            <button id="analyzeBtn" class="btn btn-outline">Ручний аналіз статей</button>
-        </div>
-        <div id="logContainer" class="bg-white p-4 rounded shadow-md h-64 overflow-y-auto"></div>
-    </main>
-
-    <footer class="bg-gray-200 p-4">
-        <div class="container mx-auto flex flex-col items-center">
-            <div class="flex space-x-4 mb-4">
-                <a href="http://t.me/orest_trump" target="_blank" rel="noopener noreferrer" class="text-2xl">
-                    📱
-                </a>
-                <a href="https://twitter.com/orest_trump" target="_blank" rel="noopener noreferrer" class="text-2xl">
-                    🐦
-                </a>
-            </div>
-            <img src="https://arleysign.com/wp-content/uploads/2019/10/1109_50.png" alt="Logo" width="100" height="100" class="mb-2">
-            <p class="text-sm text-gray-600">Розробка Масонів</p>
-            <p class="text-sm text-gray-600">2024</p>
-        </div>
-    </footer>
+<body>
+    <h1>Керування скраперами</h1>
+    <button onclick="runScraper('babel')">Запустити скрапер Babel</button>
+    <button onclick="runScraper('apostrophe')">Запустити скрапер Apostrophe</button>
+    <button onclick="runAnalyzer()">Запустити аналізатор</button>
+    <div id="log"></div>
 
     <script>
-    function appendLog(message) {
-        const logContainer = document.getElementById('logContainer');
-        const logEntry = document.createElement('p');
-        logEntry.textContent = message;
-        logContainer.appendChild(logEntry);
-        logContainer.scrollTop = logContainer.scrollHeight;
-    }
+        function runScraper(type) {
+            const log = document.getElementById('log');
+            log.innerHTML += `<p>Запуск скрапера ${type}...</p>`;
+            fetch(`/api/scrape${type === 'apostrophe' ? '_apostrophe' : ''}?type=manual`)
+                .then(response => response.json())
+                .then(data => {
+                    log.innerHTML += `<p>Результат: ${JSON.stringify(data)}</p>`;
+                })
+                .catch(error => {
+                    log.innerHTML += `<p>Помилка: ${error}</p>`;
+                });
+        }
 
-    document.getElementById('firstScrapeBtn').addEventListener('click', () => {
-        appendLog('Початок першого скрапінгу...');
-        fetch('/api/scrape?type=first')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    appendLog(`Помилка: ${data.error}`);
-                } else {
-                    appendLog(data.message || 'Перший скрапінг завершено');
-                }
-            })
-            .catch(error => {
-                appendLog(`Помилка: ${error.message}`);
-            });
-    });
-
-    document.getElementById('manualScrapeBtn').addEventListener('click', () => {
-        appendLog('Початок ручного скрапінгу...');
-        fetch('/api/scrape?type=manual')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    appendLog(`Помилка: ${data.error}`);
-                } else {
-                    appendLog(data.message || 'Ручний скрапінг завершено');
-                }
-            })
-            .catch(error => {
-                appendLog(`Помилка: ${error.message}`);
-            });
-    });
-
-    document.getElementById('analyzeBtn').addEventListener('click', () => {
-        appendLog('Початок аналізу статей...');
-        fetch('/api/analyze')
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    appendLog(`Помилка: ${data.error}`);
-                    if (data.details) appendLog(`Деталі: ${data.details}`);
-                } else {
-                    appendLog(data.message || 'Аналіз статей завершено');
-                    if (data.analyzedCount !== undefined) {
-                        appendLog(`Проаналізовано статей: ${data.analyzedCount}`);
-                    }
-                    if (data.executionTime !== undefined) {
-                        appendLog(`Час виконання: ${data.executionTime.toFixed(2)} секунд`);
-                    }
-                }
-            })
-            .catch(error => {
-                appendLog(`Помилка: ${error.message}`);
-            });
-    });
+        function runAnalyzer() {
+            const log = document.getElementById('log');
+            log.innerHTML += '<p>Запуск аналізатора...</p>';
+            fetch('/api/analyze')
+                .then(response => response.json())
+                .then(data => {
+                    log.innerHTML += `<p>Результат: ${JSON.stringify(data)}</p>`;
+                })
+                .catch(error => {
+                    log.innerHTML += `<p>Помилка: ${error}</p>`;
+                });
+        }
     </script>
 </body>
 </html>

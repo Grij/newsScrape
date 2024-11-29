@@ -7,6 +7,7 @@
   ],
   "routes": [
     { "src": "/api/scrape", "dest": "/api/scrape.py" },
+    { "src": "/api/scrape_apostrophe", "dest": "/api/scrape_apostrophe.py" },
     { "src": "/api/analyze", "dest": "/api/analyze.js" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
@@ -16,8 +17,8 @@
       "schedule": "5 16 * * *"
     },
     {
-      "path": "/api/analyze",
+      "path": "/api/scrape_apostrophe?type=manual",
       "schedule": "10 16 * * *"
-    }
+    },
   ]
 }
