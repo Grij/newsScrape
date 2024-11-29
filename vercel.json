@@ -1,24 +1,23 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/*.js", "use": "@vercel/node" },
-    { "src": "api/*.py", "use": "@vercel/python" },
-    { "src": "*.html", "use": "@vercel/static" }
+    { "src": "api/scrape.py", "use": "@vercel/python" },
+    { "src": "api/scrape_apostrophe.py", "use": "@vercel/python" },
+    { "src": "index.html", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/scrape", "dest": "/api/scrape.py" },
-    { "src": "/api/scrape_apostrophe", "dest": "/api/scrape_apostrophe.py" },
-    { "src": "/api/analyze", "dest": "/api/analyze.js" },
+    { "src": "/api/scrape", "dest": "api/scrape.py" },
+    { "src": "/api/scrape_apostrophe", "dest": "api/scrape_apostrophe.py" },
     { "src": "/(.*)", "dest": "/index.html" }
   ],
   "crons": [
     {
       "path": "/api/scrape?type=manual",
-      "schedule": "5 16 * * *"
+      "schedule": "0 */3 * * *"
     },
     {
       "path": "/api/scrape_apostrophe?type=manual",
-      "schedule": "10 16 * * *"
-    },
+      "schedule": "30 */3 * * *"
+    }
   ]
 }
